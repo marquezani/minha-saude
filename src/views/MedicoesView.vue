@@ -100,6 +100,7 @@
               <th>Horário</th>
               <th>Em Jejum?</th>
               <th>mg/dL</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -119,6 +120,15 @@
               <td>
                 <strong>{{ item.mdDl }}</strong>
               </td>
+              <td>
+                <button
+                  @click="handleDeletar(item.id)"
+                  class="btn btn-sm btn-outline-danger"
+                  title="Excluir registro"
+                >
+                  Excluir
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -136,12 +146,60 @@
         {{ notificacao.mensagem }}
       </div>
     </transition>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <div
+      class="modal fade"
+      id="deleteConfirmModal"
+      tabindex="-1"
+      ref="deleteModal"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Confirmar Exclusão</h5>
+            <button
+              type="button"
+              class="btn-close"
+              @click="hideDeleteModal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Tem certeza que deseja excluir este registro? Esta ação não pode
+              ser desfeita.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="hideDeleteModal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              @click="confirmarExclusao"
+            >
+              Sim, Excluir
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { obterRegistros, salvarRegistro } from "@/servers/glicoseServe";
+import {
+  obterRegistros,
+  salvarRegistro,
+  deletarRegistro,
+} from "@/servers/glicoseServe";
 import { logout } from "../servers/authService";
+import { Modal } from "bootstrap";
 
 export default {
   data() {
@@ -149,8 +207,11 @@ export default {
       enviando: false,
       itensGlicose: [],
       form: {
-        data: new Date().toISOString().substr(0, 10),
-        horario: "",
+        data: new Date().toISOString().substring(0, 10),
+        horario: new Date().toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         emJejum: "sim",
         mdDl: null,
       },
@@ -159,6 +220,8 @@ export default {
         mensagem: "",
         tipo: "success",
       },
+      deleteModalInstance: null,
+      itemParaDeletarId: null,
     };
   },
   methods: {
@@ -194,6 +257,26 @@ export default {
         this.enviando = false;
       }
     },
+    handleDeletar(id) {
+      this.itemParaDeletarId = id;
+      this.deleteModalInstance.show();
+    },
+    hideDeleteModal() {
+      this.deleteModalInstance.hide();
+    },
+    async confirmarExclusao() {
+      if (!this.itemParaDeletarId) return;
+      try {
+        await deletarRegistro(this.itemParaDeletarId);
+        this.exibirMensagem("Registro excluído com sucesso!");
+        await this.carregarDados();
+      } catch (err) {
+        this.exibirMensagem("Erro ao excluir o registro.", "error");
+      } finally {
+        this.hideDeleteModal();
+        this.itemParaDeletarId = null;
+      }
+    },
     formatarData(data) {
       if (!data) return "";
       return data.split("-").reverse().join("/");
@@ -205,6 +288,9 @@ export default {
   },
   mounted() {
     this.carregarDados();
+    if (this.$refs.deleteModal) {
+      this.deleteModalInstance = new Modal(this.$refs.deleteModal);
+    }
   },
 };
 </script>
