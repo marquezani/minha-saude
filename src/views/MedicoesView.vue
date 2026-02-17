@@ -1,5 +1,8 @@
 <template>
   <div class="container mt-4">
+    <div class="d-flex justify-content-end mb-3">
+      <button @click="handleLogout" class="btn btn-outline-danger">Sair</button>
+    </div>
     <div class="row justify-content-center">
       <div class="col-md-8 col-lg-6">
         <div class="card shadow-sm border-0 rounded-4">
@@ -138,6 +141,7 @@
 
 <script>
 import { obterRegistros, salvarRegistro } from "@/servers/glicoseServe";
+import { logout } from "../servers/authService";
 
 export default {
   data() {
@@ -193,6 +197,10 @@ export default {
     formatarData(data) {
       if (!data) return "";
       return data.split("-").reverse().join("/");
+    },
+    handleLogout() {
+      logout();
+      this.$router.push("/");
     },
   },
   mounted() {

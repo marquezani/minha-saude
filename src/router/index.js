@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import MedicoesView from '../views/MedicoesView.vue'
+import { isAuthenticated } from '../servers/authService'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,17 +12,20 @@ const router = createRouter({
             component: LoginView
         },
         {
-            path: '/',
+            path: '/medicoes',
+            name: 'medicoes',
             component: MedicoesView,
-            children: [
-                {
-                    path: '/medicoes',
-                    name: 'medicoes',
-                    component: () => import('../views/MedicoesView.vue')
-                }
-            ]
+            meta: { requiresAuth: true }
         }
     ]
+})
+
+router.beforeEach((to, from, next) => {
+    if (to.meta.requiresAuth && !isAuthenticated()) {
+        next({ name: 'login' })
+    } else {
+        next()
+    }
 })
 
 export default router
