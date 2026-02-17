@@ -50,10 +50,6 @@ const handleLogin = () => {
           <div v-if="errorMessage" class="alert alert-danger" role="alert">
             {{ errorMessage }}
           </div>
-          <p class="text-muted small">
-            Use <strong>admin</strong> e senha <strong>password</strong> para
-            acessar.
-          </p>
           <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
             Entrar
           </button>
