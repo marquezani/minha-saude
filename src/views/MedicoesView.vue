@@ -380,6 +380,7 @@ export default {
 
 <style scoped>
 .font-bold {
+  color: red;
   font-weight: bold;
 }
 .mensagem-sem-registro {
