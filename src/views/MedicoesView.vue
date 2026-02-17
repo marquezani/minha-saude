@@ -62,6 +62,29 @@
                 </div>
               </div>
 
+              <div v-if="form.emJejum === 'sim'">
+                <label class="form-label fw-semibold">Início do Jejum</label>
+                <div class="row mb-3">
+                  <div class="col">
+                    <input
+                      type="date"
+                      class="form-control"
+                      v-model="form.dataInicioJejum"
+                      required
+                    />
+                  </div>
+                  <div class="col">
+                    <input
+                      type="time"
+                      class="form-control"
+                      id="inicioJejum"
+                      v-model="form.inicioJejum"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div class="mb-4">
                 <label class="form-label">Medição (mg/dL)</label>
                 <div class="input-group">
@@ -100,13 +123,18 @@
               <th>Horário</th>
               <th>Em Jejum?</th>
               <th>mg/dL</th>
+              <th>Horas em Jejum</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="item in itensGlicose" :key="item.id">
-              <td>{{ formatarData(item.data) }}</td>
-              <td>{{ item.horario }}</td>
+              <td>
+                <span class="font-bold">{{ formatarData(item.data) }}</span>
+              </td>
+              <td>
+                <span class="font-bold">{{ item.horario }}</span>
+              </td>
               <td>
                 <span
                   :class="[
@@ -118,7 +146,23 @@
                 </span>
               </td>
               <td>
-                <strong>{{ item.mdDl }}</strong>
+                <span class="font-bold">{{ item.mdDl }}</span>
+              </td>
+              <td>
+                <span
+                  class="font-bold"
+                  v-if="item.emJejum === 'sim' && item.inicioJejum"
+                >
+                  {{
+                    calcularHorasJejum(
+                      item.dataInicioJejum,
+                      item.inicioJejum,
+                      item.data,
+                      item.horario,
+                    )
+                  }}
+                </span>
+                <span v-else>-</span>
               </td>
               <td>
                 <button
@@ -203,6 +247,9 @@ import { Modal } from "bootstrap";
 
 export default {
   data() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
     return {
       enviando: false,
       itensGlicose: [],
@@ -214,6 +261,8 @@ export default {
         }),
         emJejum: "sim",
         mdDl: null,
+        dataInicioJejum: yesterday.toISOString().substring(0, 10),
+        inicioJejum: "",
       },
       notificacao: {
         visivel: false,
@@ -248,7 +297,11 @@ export default {
         // O json-server retorna 201 Created para POST com sucesso
         if (response.status === 201 || response.status === 200) {
           this.exibirMensagem("Registro salvo com sucesso!");
-          this.form.mdDl = null; // Limpa apenas o valor da glicose
+          this.form.mdDl = null;
+          this.form.inicioJejum = "20:00";
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          this.form.dataInicioJejum = yesterday.toISOString().substring(0, 10);
           await this.carregarDados(); // Recarrega a grid
         }
       } catch (err) {
@@ -281,6 +334,36 @@ export default {
       if (!data) return "";
       return data.split("-").reverse().join("/");
     },
+    calcularHorasJejum(dataInicio, horaInicio, dataFim, horaFim) {
+      if (!dataInicio || !horaInicio || !dataFim || !horaFim) {
+        return "N/A";
+      }
+
+      // Cria objetos Date a partir das strings de data e hora combinadas
+      const startDateTime = new Date(`${dataInicio}T${horaInicio}`);
+      const endDateTime = new Date(`${dataFim}T${horaFim}`);
+
+      // Verifica se as datas são válidas
+      if (isNaN(startDateTime) || isNaN(endDateTime)) {
+        return "Inválido";
+      }
+
+      const diffMs = endDateTime - startDateTime;
+
+      // Se a diferença for negativa, os dados de entrada estão incorretos
+      if (diffMs < 0) return "Erro";
+
+      // Calcula o total de horas e minutos da diferença
+      const totalMinutes = Math.floor(diffMs / (1000 * 60));
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      // Formata para HH:mm, adicionando um zero à esquerda se necessário
+      const paddedHours = String(hours).padStart(2, "0");
+      const paddedMinutes = String(minutes).padStart(2, "0");
+
+      return `${paddedHours}:${paddedMinutes}`;
+    },
     handleLogout() {
       logout();
       this.$router.push("/");
@@ -296,6 +379,9 @@ export default {
 </script>
 
 <style scoped>
+.font-bold {
+  font-weight: bold;
+}
 .mensagem-sem-registro {
   margin-top: 20px;
   font-size: 18px;
