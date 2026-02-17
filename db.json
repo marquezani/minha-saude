@@ -1,0 +1,34 @@
+{
+  "medicamentos": [
+    {
+      "id": "1",
+      "name": "Paracetamol",
+      "description": "Analgésico y antipirético utilizado para aliviar el dolor y reducir la fiebre.",
+      "price": 5.99,
+      "stock": 100
+    },
+    {
+      "id": "2",
+      "name": "Ibuprofeno",
+      "description": "Antiinflamatorio no esteroideo (AINE) utilizado para aliviar el dolor, reducir la inflamación y bajar la fiebre.",
+      "price": 7.99,
+      "stock": 50
+    },
+    {
+      "id": "3",
+      "name": "Amoxicilina",
+      "description": "Antibiótico utilizado para tratar infecciones bacterianas.",
+      "price": 12.99,
+      "stock": 30
+    }
+  ],
+  "glicose": [
+    {
+      "id": "518c",
+      "data": "2026-02-17",
+      "horario": "10:00",
+      "emJejum": "sim",
+      "mdDl": 100
+    }
+  ]
+}
