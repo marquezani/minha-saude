@@ -92,6 +92,7 @@
                     type="number"
                     class="form-control form-control-lg"
                     v-model="form.mdDl"
+                    inputmode="numeric"
                     required
                   />
                   <span class="input-group-text">mg/dL</span>
