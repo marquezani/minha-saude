@@ -1,3 +1,93 @@
-@import "./base.css";
+/* Estilos Globais da Aplicação */
 
-/* Você pode adicionar seus estilos globais customizados aqui */
+/* Tabela Padrão */
+.table-responsive {
+  border: 1px solid #f1f5f9;
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.grid-saude {
+  width: 100%;
+  border-collapse: separate;
+  background: #fff;
+  min-width: 600px; /* Garante que a tabela não esmague os dados */
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.grid-saude th {
+  background: #f8fafc;
+  padding: 15px;
+  color: #64748b;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  border-bottom: 2px solid #f1f5f9;
+  letter-spacing: 0.025em;
+}
+
+.grid-saude td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.text-nowrap {
+  white-space: nowrap;
+}
+
+/* Badge de Status */
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.status-jejum {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-normal {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Notificação (Toast) */
+.toast-custom {
+  position: fixed;
+  top: 25px;
+  right: 25px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  color: white;
+  z-index: 10000;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+}
+
+.toast-custom.success {
+  background-color: #10b981;
+}
+
+.toast-custom.error {
+  background-color: #ef4444;
+}
+
+/* Animação do Toast */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.4s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px) translateX(10px);
+}
