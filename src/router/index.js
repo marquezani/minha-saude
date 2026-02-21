@@ -3,7 +3,7 @@ import LoginView from '../views/LoginView.vue'
 import MedicoesView from '../views/MedicoesView.vue'
 import MedidaCorporalView from '../views/MedidaCorporalView.vue'
 import DashboardView from '../views/DashboardView.vue'
-//import { isAuthenticated } from '../servers/authService'
+import { isAuthenticated } from '../servers/authService'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,12 +34,12 @@ const router = createRouter({
     ]
 })
 
-// router.beforeEach((to, from, next) => {
-//     if (to.meta.requiresAuth && !isAuthenticated()) {
-//         next({ name: 'login' })
-//     } else {
-//         next()
-//     }
-// })
+router.beforeEach((to, from, next) => {
+    if (to.meta.requiresAuth && !isAuthenticated()) {
+        next({ name: 'login' })
+    } else {
+        next()
+    }
+})
 
 export default router
