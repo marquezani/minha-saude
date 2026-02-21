@@ -1,8 +1,11 @@
 <template>
   <div class="container mt-4">
     <div class="d-flex justify-content-end mb-3">
-      <button @click="handleLogout" class="btn btn-outline-danger">Sair</button>
+      <button @click="handleLogout" class="btn btn-outline-danger shadow-sm">
+        Sair
+      </button>
     </div>
+
     <div class="row justify-content-center">
       <div class="col-md-8 col-lg-6">
         <div class="card shadow-sm border-0 rounded-4">
@@ -77,7 +80,6 @@
                     <input
                       type="time"
                       class="form-control"
-                      id="inicioJejum"
                       v-model="form.inicioJejum"
                       required
                     />
@@ -92,7 +94,6 @@
                     type="number"
                     class="form-control form-control-lg"
                     v-model="form.mdDl"
-                    inputmode="numeric"
                     required
                   />
                   <span class="input-group-text">mg/dL</span>
@@ -117,7 +118,7 @@
     <div class="row justify-content-center mt-5">
       <div class="col-md-10">
         <h4 class="mb-3">Histórico de Medições</h4>
-        <table class="grid-saude" v-if="itensGlicose.length != 0">
+        <table class="grid-saude" v-if="itensGlicose.length > 0">
           <thead>
             <tr>
               <th>Data</th>
@@ -130,38 +131,22 @@
           </thead>
           <tbody>
             <tr v-for="item in itensGlicose" :key="item.id">
-              <td>
-                <span class="font-bold">{{ formatarData(item.data) }}</span>
-              </td>
-              <td>
-                <span class="font-bold">{{ item.horario }}</span>
-              </td>
+              <td>{{ formatarData(item.data_horario) }}</td>
+              <td>{{ formatarHora(item.data_horario) }}</td>
               <td>
                 <span
                   :class="[
                     'status-badge',
-                    item.emJejum === 'sim' ? 'status-jejum' : 'status-normal',
+                    item.em_jejum ? 'status-jejum' : 'status-normal',
                   ]"
                 >
-                  {{ item.emJejum }}
+                  {{ item.em_jejum ? "Sim" : "Não" }}
                 </span>
               </td>
+              <td class="fw-bold">{{ item.mg_dl }}</td>
               <td>
-                <span class="font-bold">{{ item.mdDl }}</span>
-              </td>
-              <td>
-                <span
-                  class="font-bold"
-                  v-if="item.emJejum === 'sim' && item.inicioJejum"
-                >
-                  {{
-                    calcularHorasJejum(
-                      item.dataInicioJejum,
-                      item.inicioJejum,
-                      item.data,
-                      item.horario,
-                    )
-                  }}
+                <span v-if="item.em_jejum && item.horas_jejum" class="fw-bold">
+                  {{ item.horas_jejum }}
                 </span>
                 <span v-else>-</span>
               </td>
@@ -169,7 +154,6 @@
                 <button
                   @click="handleDeletar(item.id)"
                   class="btn btn-sm btn-outline-danger"
-                  title="Excluir registro"
                 >
                   Excluir
                 </button>
@@ -177,9 +161,9 @@
             </tr>
           </tbody>
         </table>
-        <span v-if="itensGlicose.length === 0" class="mensagem-sem-registro"
-          >Nenhum registro encontrado.</span
-        >
+        <div v-else class="text-center p-4 bg-light rounded">
+          Nenhum registro encontrado.
+        </div>
       </div>
     </div>
 
@@ -192,7 +176,6 @@
       </div>
     </transition>
 
-    <!-- Modal de Confirmação de Exclusão -->
     <div
       class="modal fade"
       id="deleteConfirmModal"
@@ -210,24 +193,13 @@
             ></button>
           </div>
           <div class="modal-body">
-            <p>
-              Tem certeza que deseja excluir este registro? Esta ação não pode
-              ser desfeita.
-            </p>
+            <p>Tem certeza que deseja excluir este registro?</p>
           </div>
           <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="hideDeleteModal"
-            >
+            <button class="btn btn-secondary" @click="hideDeleteModal">
               Cancelar
             </button>
-            <button
-              type="button"
-              class="btn btn-danger"
-              @click="confirmarExclusao"
-            >
+            <button class="btn btn-danger" @click="confirmarExclusao">
               Sim, Excluir
             </button>
           </div>
@@ -248,9 +220,6 @@ import { Modal } from "bootstrap";
 
 export default {
   data() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-
     return {
       enviando: false,
       itensGlicose: [],
@@ -260,16 +229,14 @@ export default {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        emJejum: "sim",
+        emJejum: "não",
         mdDl: null,
-        dataInicioJejum: yesterday.toISOString().substring(0, 10),
-        inicioJejum: "",
+        dataInicioJejum: new Date(Date.now() - 86400000)
+          .toISOString()
+          .substring(0, 10),
+        inicioJejum: "22:00",
       },
-      notificacao: {
-        visivel: false,
-        mensagem: "",
-        tipo: "success",
-      },
+      notificacao: { visivel: false, mensagem: "", tipo: "success" },
       deleteModalInstance: null,
       itemParaDeletarId: null,
     };
@@ -285,26 +252,36 @@ export default {
     },
     async carregarDados() {
       try {
-        const res = await obterRegistros();
-        this.itensGlicose = res.data;
+        this.itensGlicose = (await obterRegistros()) || [];
       } catch (err) {
-        console.error("Erro na API:", err);
+        this.exibirMensagem("Erro ao carregar dados", "error");
       }
     },
     async handleSalvar() {
       this.enviando = true;
       try {
-        const response = await salvarRegistro(this.form);
-        // O json-server retorna 201 Created para POST com sucesso
-        if (response.status === 201 || response.status === 200) {
-          this.exibirMensagem("Registro salvo com sucesso!");
-          this.form.mdDl = null;
-          this.form.inicioJejum = "20:00";
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          this.form.dataInicioJejum = yesterday.toISOString().substring(0, 10);
-          await this.carregarDados(); // Recarrega a grid
+        // Cálculo das horas de jejum se aplicável
+        let horasCalculadas = null;
+        if (this.form.emJejum === "sim") {
+          horasCalculadas = this.calcularHorasJejum(
+            this.form.dataInicioJejum,
+            this.form.inicioJejum,
+            this.form.data,
+            this.form.horario,
+          );
         }
+
+        const payload = {
+          data_horario: `${this.form.data}T${this.form.horario}:00`,
+          em_jejum: this.form.emJejum === "sim",
+          mg_dl: parseInt(this.form.mdDl),
+          horas_jejum: horasCalculadas !== "Erro" ? horasCalculadas : null,
+        };
+
+        await salvarRegistro(payload);
+        this.exibirMensagem("Registro salvo com sucesso!");
+        this.form.mdDl = null;
+        await this.carregarDados();
       } catch (err) {
         this.exibirMensagem("Erro ao salvar o registro.", "error");
       } finally {
@@ -319,51 +296,34 @@ export default {
       this.deleteModalInstance.hide();
     },
     async confirmarExclusao() {
-      if (!this.itemParaDeletarId) return;
       try {
         await deletarRegistro(this.itemParaDeletarId);
-        this.exibirMensagem("Registro excluído com sucesso!");
+        this.exibirMensagem("Registro excluído!");
         await this.carregarDados();
       } catch (err) {
-        this.exibirMensagem("Erro ao excluir o registro.", "error");
+        this.exibirMensagem("Erro ao excluir", "error");
       } finally {
         this.hideDeleteModal();
-        this.itemParaDeletarId = null;
       }
     },
-    formatarData(data) {
-      if (!data) return "";
-      return data.split("-").reverse().join("/");
+    formatarData(iso) {
+      return new Date(iso).toLocaleDateString("pt-BR");
     },
-    calcularHorasJejum(dataInicio, horaInicio, dataFim, horaFim) {
-      if (!dataInicio || !horaInicio || !dataFim || !horaFim) {
-        return "N/A";
-      }
-
-      // Cria objetos Date a partir das strings de data e hora combinadas
-      const startDateTime = new Date(`${dataInicio}T${horaInicio}`);
-      const endDateTime = new Date(`${dataFim}T${horaFim}`);
-
-      // Verifica se as datas são válidas
-      if (isNaN(startDateTime) || isNaN(endDateTime)) {
-        return "Inválido";
-      }
-
-      const diffMs = endDateTime - startDateTime;
-
-      // Se a diferença for negativa, os dados de entrada estão incorretos
+    formatarHora(iso) {
+      return new Date(iso).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    },
+    calcularHorasJejum(dataI, horaI, dataF, horaF) {
+      const inicio = new Date(`${dataI}T${horaI}`);
+      const fim = new Date(`${dataF}T${horaF}`);
+      const diffMs = fim - inicio;
       if (diffMs < 0) return "Erro";
-
-      // Calcula o total de horas e minutos da diferença
-      const totalMinutes = Math.floor(diffMs / (1000 * 60));
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = totalMinutes % 60;
-
-      // Formata para HH:mm, adicionando um zero à esquerda se necessário
-      const paddedHours = String(hours).padStart(2, "0");
-      const paddedMinutes = String(minutes).padStart(2, "0");
-
-      return `${paddedHours}:${paddedMinutes}`;
+      const totalMin = Math.floor(diffMs / 60000);
+      return `${Math.floor(totalMin / 60)
+        .toString()
+        .padStart(2, "0")}:${(totalMin % 60).toString().padStart(2, "0")}`;
     },
     handleLogout() {
       logout();
@@ -372,31 +332,17 @@ export default {
   },
   mounted() {
     this.carregarDados();
-    if (this.$refs.deleteModal) {
+    if (this.$refs.deleteModal)
       this.deleteModalInstance = new Modal(this.$refs.deleteModal);
-    }
   },
 };
 </script>
 
 <style scoped>
-.font-bold {
-  color: red;
-  font-weight: bold;
-}
-.mensagem-sem-registro {
-  margin-top: 20px;
-  font-size: 18px;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-}
-
-/* Estilos mantidos conforme sua solicitação */
+/* Estilos ajustados para legibilidade */
 .grid-saude {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0;
   background: #fff;
   border-radius: 8px;
   overflow: hidden;
@@ -408,7 +354,6 @@ export default {
   color: #64748b;
   font-size: 0.8rem;
   text-transform: uppercase;
-  text-align: left;
 }
 .grid-saude td {
   padding: 12px 15px;
@@ -435,9 +380,7 @@ export default {
   padding: 15px 25px;
   border-radius: 8px;
   color: white;
-  font-weight: bold;
   z-index: 9999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 .success {
   background-color: #2ecc71;

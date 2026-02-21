@@ -1,20 +1,33 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { login } from "../servers/authService";
+import { handler } from "../servers/authService";
 
 const router = useRouter();
 const usuario = ref("");
 const password = ref("");
 const errorMessage = ref("");
+const loading = ref(false); // Feedback visual
 
-const handleLogin = () => {
+const handleLogin = async () => {
+  if (loading.value) return;
+
+  loading.value = true;
   errorMessage.value = "";
-  const success = login(usuario.value, password.value);
-  if (success) {
-    router.push("/medicoes");
-  } else {
-    errorMessage.value = "Credenciais inválidas. Tente novamente.";
+
+  try {
+    // Chama o serviço esperando a resposta do banco
+    const success = await handler(usuario.value, password.value);
+
+    if (success) {
+      router.push("/medicoes");
+    } else {
+      errorMessage.value = "Usuário ou senha inválidos.";
+    }
+  } catch (err) {
+    errorMessage.value = "Erro ao conectar com o banco de dados.";
+  } finally {
+    loading.value = false;
   }
 };
 </script>
@@ -34,6 +47,7 @@ const handleLogin = () => {
               class="form-control"
               id="usuario"
               v-model="usuario"
+              :disabled="loading"
               required
             />
           </div>
@@ -44,14 +58,21 @@ const handleLogin = () => {
               class="form-control"
               id="password"
               v-model="password"
+              :disabled="loading"
               required
             />
           </div>
-          <div v-if="errorMessage" class="alert alert-danger" role="alert">
-            {{ errorMessage }}
+
+          <div v-if="errorMessage" class="alert alert-danger p-2" role="alert">
+            <small>{{ errorMessage }}</small>
           </div>
-          <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
-            Entrar
+
+          <button
+            type="submit"
+            class="btn btn-primary btn-lg w-100 mt-3"
+            :disabled="loading"
+          >
+            {{ loading ? "Carregando..." : "Entrar" }}
           </button>
         </form>
       </div>
