@@ -37,6 +37,7 @@ const handleLogin = async () => {
     class="container vh-100 d-flex justify-content-center align-items-center"
   >
     <div class="card p-4 shadow-sm" style="width: 100%; max-width: 400px">
+      <span class="versao">V 1.0</span>
       <div class="card-body">
         <h1 class="card-title mb-4">Login</h1>
         <form @submit.prevent="handleLogin">
@@ -79,3 +80,13 @@ const handleLogin = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.versao {
+  display: block;
+  text-align: right;
+  margin-top: 10px;
+  color: #888;
+  font-size: 8px;
+}
+</style>

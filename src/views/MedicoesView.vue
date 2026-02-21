@@ -257,10 +257,10 @@ export default {
         this.exibirMensagem("Erro ao carregar dados", "error");
       }
     },
+    // MedicoesView.vue
     async handleSalvar() {
       this.enviando = true;
       try {
-        // Cálculo das horas de jejum se aplicável
         let horasCalculadas = null;
         if (this.form.emJejum === "sim") {
           horasCalculadas = this.calcularHorasJejum(
@@ -271,18 +271,19 @@ export default {
           );
         }
 
-        const payload = {
-          data_horario: `${this.form.data}T${this.form.horario}:00`,
-          em_jejum: this.form.emJejum === "sim",
-          mg_dl: parseInt(this.form.mdDl),
-          horas_jejum: horasCalculadas !== "Erro" ? horasCalculadas : null,
+        // Envie o formulário completo + o cálculo
+        const dadosParaSalvar = {
+          ...this.form,
+          horas_jejum: horasCalculadas, // Adicionamos o resultado do cálculo aqui
         };
 
-        await salvarRegistro(payload);
+        await salvarRegistro(dadosParaSalvar);
+
         this.exibirMensagem("Registro salvo com sucesso!");
         this.form.mdDl = null;
         await this.carregarDados();
       } catch (err) {
+        console.error("Erro detalhado:", err);
         this.exibirMensagem("Erro ao salvar o registro.", "error");
       } finally {
         this.enviando = false;
@@ -315,15 +316,15 @@ export default {
         minute: "2-digit",
       });
     },
-    calcularHorasJejum(dataI, horaI, dataF, horaF) {
-      const inicio = new Date(`${dataI}T${horaI}`);
-      const fim = new Date(`${dataF}T${horaF}`);
+    calcularHorasJejum(dataInicio, horaInicio, dataFim, horaFim) {
+      const inicio = new Date(`${dataInicio}T${horaInicio}`);
+      const fim = new Date(`${dataFim}T${horaFim}`);
       const diffMs = fim - inicio;
-      if (diffMs < 0) return "Erro";
-      const totalMin = Math.floor(diffMs / 60000);
-      return `${Math.floor(totalMin / 60)
-        .toString()
-        .padStart(2, "0")}:${(totalMin % 60).toString().padStart(2, "0")}`;
+
+      if (isNaN(diffMs) || diffMs < 0) return 0;
+
+      // Retorna apenas o total de horas como número inteiro
+      return Math.floor(diffMs / (1000 * 60 * 60));
     },
     handleLogout() {
       logout();

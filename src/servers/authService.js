@@ -1,9 +1,8 @@
 import { supabase } from '../https/url'; // Verifique se o caminho do seu client está correto
-let USER_KEY = '';
+
 
 export const handler = async (user, pass) => {
-
-    USER_KEY = user; // Armazena o nome de usuário para uso futuro, se necessário
+    // Armazena o nome de usuário para uso futuro, se necessário
     try {
         const { data, error } = await supabase
             .from('usuarios')
@@ -15,7 +14,7 @@ export const handler = async (user, pass) => {
 
         if (data.password_hash === pass) {
 
-            localStorage.setItem(USER_KEY, JSON.stringify(data));
+            localStorage.setItem('usuario_sessao', JSON.stringify(data));
 
             return true;
         }
@@ -32,5 +31,5 @@ export function logout() {
 }
 
 export function isAuthenticated() {
-    return !!localStorage.getItem(USER_KEY);
+    return !!localStorage.getItem('usuario_sessao');
 }

@@ -21,12 +21,28 @@ export async function obterRegistros() {
     }
 }
 
-export async function salvarRegistro() {
-    // const response = await axios.post(`${URL_API}glicose`, form);
+export async function salvarRegistro(form) {
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuario_sessao'));
 
-    //return response;
+    // Monta a data no formato ISO que o Postgres aceita
+    const dataHorarioIso = `${form.data}T${form.horario}:00`;
+
+    const { status, error } = await supabase
+        .from('glicose')
+        .insert([
+            {
+                usuario_id: usuarioLogado.id,
+                data_horario: dataHorarioIso,
+                em_jejum: form.emJejum === 'sim',
+                mg_dl: parseInt(form.mdDl),
+                // Aqui pegamos o valor calculado que você passou no payload
+                horas_jejum: form.horas_jejum
+            }
+        ]);
+
+    if (error) throw error;
+    return { status };
 }
-
 export async function deletarRegistro() {
     // try {
     //     const response = await axios.delete(`${URL_API}glicose/${id}`);
