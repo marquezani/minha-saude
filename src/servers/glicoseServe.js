@@ -43,12 +43,16 @@ export async function salvarRegistro(form) {
     if (error) throw error;
     return { status };
 }
-export async function deletarRegistro() {
-    // try {
-    //     const response = await axios.delete(`${URL_API}glicose/${id}`);
-    //     return response;
-    // } catch (error) {
-    //     console.error("Erro ao deletar registro:", error);
-    //     throw error;
-    // }
+export async function deletarRegistro(id) {
+    const { status, error } = await supabase
+        .from('glicose')
+        .delete()
+        .eq('id', id); // Filtra pelo ID do registro
+
+    if (error) {
+        console.error("Erro ao deletar:", error.message);
+        throw error;
+    }
+
+    return status;
 }
