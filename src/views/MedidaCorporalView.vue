@@ -63,7 +63,7 @@
           <h4 class="mb-3">Histórico Corporal</h4>
 
           <div
-            v-if="itensCorporais.length > 0"
+            v-if="paginatedItems.length > 0"
             class="table-responsive shadow-sm rounded-3"
           >
             <table class="grid-saude mb-0">
@@ -76,7 +76,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="item in itensCorporais" :key="item.id">
+                <tr v-for="item in paginatedItems" :key="item.id">
                   <td class="text-nowrap">{{ formatarData(item.data) }}</td>
                   <td class="fw-bold">{{ item.peso }} kg</td>
                   <td class="fw-bold">
@@ -97,6 +97,39 @@
 
           <div v-else class="text-center p-4 bg-light rounded shadow-sm">
             Nenhum registro de medidas encontrado.
+          </div>
+
+          <div v-if="totalPages > 1" class="d-flex justify-content-center mt-4">
+            <nav aria-label="Page navigation">
+              <ul class="pagination">
+                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                  <a class="page-link" href="#" @click.prevent="prevPage"
+                    >Anterior</a
+                  >
+                </li>
+                <li
+                  v-for="page in totalPages"
+                  :key="page"
+                  class="page-item"
+                  :class="{ active: currentPage === page }"
+                >
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="goToPage(page)"
+                    >{{ page }}</a
+                  >
+                </li>
+                <li
+                  class="page-item"
+                  :class="{ disabled: currentPage === totalPages }"
+                >
+                  <a class="page-link" href="#" @click.prevent="nextPage"
+                    >Próximo</a
+                  >
+                </li>
+              </ul>
+            </nav>
           </div>
         </div>
       </div>
@@ -171,7 +204,25 @@ export default {
       notificacao: { visivel: false, mensagem: "", tipo: "success" },
       deleteModalInstance: null,
       itemParaDeletarId: null,
+      currentPage: 1,
+      itemsPerPage: 10,
     };
+  },
+  computed: {
+    totalPages() {
+      if (!this.itensCorporais || this.itensCorporais.length === 0) {
+        return 1;
+      }
+      return Math.ceil(this.itensCorporais.length / this.itemsPerPage);
+    },
+    paginatedItems() {
+      if (!this.itensCorporais || this.itensCorporais.length === 0) {
+        return [];
+      }
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.itensCorporais.slice(start, end);
+    },
   },
   methods: {
     exibirMensagem(texto, tipo = "success") {
@@ -216,6 +267,9 @@ export default {
         await deletarMedida(this.itemParaDeletarId);
         this.exibirMensagem("Registro excluído!");
         await this.carregarMedidas();
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = this.totalPages;
+        }
       } catch (err) {
         this.exibirMensagem("Erro ao excluir", "error");
       } finally {
@@ -225,6 +279,19 @@ export default {
     formatarData(data) {
       if (!data) return "";
       return new Date(data + "T12:00:00").toLocaleDateString("pt-BR");
+    },
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
+      }
+    },
+    prevPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+      }
+    },
+    goToPage(page) {
+      this.currentPage = page;
     },
   },
   mounted() {

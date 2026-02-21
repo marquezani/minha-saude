@@ -31,7 +31,25 @@ export default {
       notificacao: { visivel: false, mensagem: "", tipo: "success" },
       deleteModalInstance: null,
       itemParaDeletarId: null,
+      currentPage: 1,
+      itemsPerPage: 10,
     };
+  },
+  computed: {
+    totalPages() {
+      if (!this.itensGlicose || this.itensGlicose.length === 0) {
+        return 1;
+      }
+      return Math.ceil(this.itensGlicose.length / this.itemsPerPage);
+    },
+    paginatedItems() {
+      if (!this.itensGlicose || this.itensGlicose.length === 0) {
+        return [];
+      }
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.itensGlicose.slice(start, end);
+    },
   },
   methods: {
     exibirMensagem(texto, tipo = "success") {
@@ -94,6 +112,9 @@ export default {
         await deletarRegistro(this.itemParaDeletarId);
         this.exibirMensagem("Registro excluído!");
         await this.carregarDados();
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = this.totalPages;
+        }
       } catch (err) {
         this.exibirMensagem("Erro ao excluir", "error");
       } finally {
@@ -118,6 +139,19 @@ export default {
 
       // Retorna apenas o total de horas como número inteiro
       return Math.floor(diffMs / (1000 * 60 * 60));
+    },
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
+      }
+    },
+    prevPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+      }
+    },
+    goToPage(page) {
+      this.currentPage = page;
     },
   },
   mounted() {
@@ -245,8 +279,11 @@ export default {
         <div class="col-md-10">
           <h4 class="mb-3">Histórico de Medições</h4>
 
-          <div class="table-responsive shadow-sm rounded-3">
-            <table class="grid-saude mb-0" v-if="itensGlicose.length > 0">
+          <div
+            class="table-responsive shadow-sm rounded-3"
+            v-if="paginatedItems.length > 0"
+          >
+            <table class="grid-saude mb-0">
               <thead>
                 <tr>
                   <th class="text-nowrap">Data</th>
@@ -258,7 +295,7 @@ export default {
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="item in itensGlicose" :key="item.id">
+                <tr v-for="item in paginatedItems" :key="item.id">
                   <td class="text-nowrap">
                     {{ formatarData(item.data_horario) }}
                   </td>
@@ -296,9 +333,42 @@ export default {
                 </tr>
               </tbody>
             </table>
-            <div v-else class="text-center p-4 bg-light rounded">
-              Nenhum registro encontrado.
-            </div>
+          </div>
+          <div v-else class="text-center p-4 bg-light rounded">
+            Nenhum registro encontrado.
+          </div>
+
+          <div v-if="totalPages > 1" class="d-flex justify-content-center mt-4">
+            <nav aria-label="Page navigation">
+              <ul class="pagination">
+                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                  <a class="page-link" href="#" @click.prevent="prevPage"
+                    >Anterior</a
+                  >
+                </li>
+                <li
+                  v-for="page in totalPages"
+                  :key="page"
+                  class="page-item"
+                  :class="{ active: currentPage === page }"
+                >
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="goToPage(page)"
+                    >{{ page }}</a
+                  >
+                </li>
+                <li
+                  class="page-item"
+                  :class="{ disabled: currentPage === totalPages }"
+                >
+                  <a class="page-link" href="#" @click.prevent="nextPage"
+                    >Próximo</a
+                  >
+                </li>
+              </ul>
+            </nav>
           </div>
         </div>
       </div>
