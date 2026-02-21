@@ -4,10 +4,13 @@ import {
   salvarRegistro,
   deletarRegistro,
 } from "@/servers/glicoseServe";
-import { logout } from "../servers/authService";
 import { Modal } from "bootstrap";
+import AppNavbar from "@/components/Navbar.vue";
 
 export default {
+  components: {
+    AppNavbar,
+  },
   data() {
     return {
       enviando: false,
@@ -116,10 +119,6 @@ export default {
       // Retorna apenas o total de horas como número inteiro
       return Math.floor(diffMs / (1000 * 60 * 60));
     },
-    handleLogout() {
-      logout();
-      this.$router.push("/");
-    },
   },
   mounted() {
     this.carregarDados();
@@ -130,179 +129,176 @@ export default {
 </script>
 
 <template>
-  <div class="container mt-4">
-    <div class="d-flex justify-content-end mb-3">
-      <button @click="handleLogout" class="btn btn-outline-danger shadow-sm">
-        Sair
-      </button>
-    </div>
+  <div>
+    <app-navbar />
+    <div class="container pt-4">
+      <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+          <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4 p-md-5">
+              <h3 class="card-title text-center mb-4 fw-bold">
+                Novo Registro de Glicose
+              </h3>
 
-    <div class="row justify-content-center">
-      <div class="col-md-8 col-lg-6">
-        <div class="card shadow-sm border-0 rounded-4">
-          <div class="card-body p-4 p-md-5">
-            <h3 class="card-title text-center mb-4 fw-bold">
-              Novo Registro de Glicose
-            </h3>
-
-            <form @submit.prevent="handleSalvar">
-              <div class="row mb-3">
-                <div class="col">
-                  <label class="form-label">Data</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    v-model="form.data"
-                    required
-                  />
-                </div>
-                <div class="col">
-                  <label class="form-label">Horário</label>
-                  <input
-                    type="time"
-                    class="form-control"
-                    v-model="form.horario"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label d-block fw-semibold"
-                  >Estado de Jejum</label
-                >
-                <div class="btn-group w-100" role="group">
-                  <input
-                    type="radio"
-                    class="btn-check"
-                    id="jejumSim"
-                    value="sim"
-                    v-model="form.emJejum"
-                  />
-                  <label class="btn btn-outline-primary" for="jejumSim"
-                    >Sim</label
-                  >
-
-                  <input
-                    type="radio"
-                    class="btn-check"
-                    id="jejumNao"
-                    value="não"
-                    v-model="form.emJejum"
-                  />
-                  <label class="btn btn-outline-primary" for="jejumNao"
-                    >Não</label
-                  >
-                </div>
-              </div>
-
-              <div v-if="form.emJejum === 'sim'">
-                <label class="form-label fw-semibold">Início do Jejum</label>
+              <form @submit.prevent="handleSalvar">
                 <div class="row mb-3">
                   <div class="col">
+                    <label class="form-label">Data</label>
                     <input
                       type="date"
                       class="form-control"
-                      v-model="form.dataInicioJejum"
+                      v-model="form.data"
                       required
                     />
                   </div>
                   <div class="col">
+                    <label class="form-label">Horário</label>
                     <input
                       type="time"
                       class="form-control"
-                      v-model="form.inicioJejum"
+                      v-model="form.horario"
                       required
                     />
                   </div>
                 </div>
-              </div>
 
-              <div class="mb-4">
-                <label class="form-label">Medição (mg/dL)</label>
-                <div class="input-group">
-                  <input
-                    type="number"
-                    class="form-control form-control-lg"
-                    v-model="form.mdDl"
-                    required
-                  />
-                  <span class="input-group-text">mg/dL</span>
+                <div class="mb-3">
+                  <label class="form-label d-block fw-semibold"
+                    >Estado de Jejum</label
+                  >
+                  <div class="btn-group w-100" role="group">
+                    <input
+                      type="radio"
+                      class="btn-check"
+                      id="jejumSim"
+                      value="sim"
+                      v-model="form.emJejum"
+                    />
+                    <label class="btn btn-outline-primary" for="jejumSim"
+                      >Sim</label
+                    >
+
+                    <input
+                      type="radio"
+                      class="btn-check"
+                      id="jejumNao"
+                      value="não"
+                      v-model="form.emJejum"
+                    />
+                    <label class="btn btn-outline-primary" for="jejumNao"
+                      >Não</label
+                    >
+                  </div>
                 </div>
-              </div>
 
-              <div class="d-grid">
-                <button
-                  type="submit"
-                  class="btn btn-primary btn-lg fw-bold"
-                  :disabled="enviando"
-                >
-                  {{ enviando ? "Salvando..." : "Salvar Registro" }}
-                </button>
-              </div>
-            </form>
+                <div v-if="form.emJejum === 'sim'">
+                  <label class="form-label fw-semibold">Início do Jejum</label>
+                  <div class="row mb-3">
+                    <div class="col">
+                      <input
+                        type="date"
+                        class="form-control"
+                        v-model="form.dataInicioJejum"
+                        required
+                      />
+                    </div>
+                    <div class="col">
+                      <input
+                        type="time"
+                        class="form-control"
+                        v-model="form.inicioJejum"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-4">
+                  <label class="form-label">Medição (mg/dL)</label>
+                  <div class="input-group">
+                    <input
+                      type="number"
+                      class="form-control form-control-lg"
+                      v-model="form.mdDl"
+                      required
+                    />
+                    <span class="input-group-text">mg/dL</span>
+                  </div>
+                </div>
+
+                <div class="d-grid">
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn-lg fw-bold"
+                    :disabled="enviando"
+                  >
+                    {{ enviando ? "Salvando..." : "Salvar Registro" }}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="row justify-content-center mt-5 mb-5">
-      <div class="col-md-10">
-        <h4 class="mb-3">Histórico de Medições</h4>
+      <div class="row justify-content-center mt-5 mb-5">
+        <div class="col-md-10">
+          <h4 class="mb-3">Histórico de Medições</h4>
 
-        <div class="table-responsive shadow-sm rounded-3">
-          <table class="grid-saude mb-0" v-if="itensGlicose.length > 0">
-            <thead>
-              <tr>
-                <th class="text-nowrap">Data</th>
-                <th class="text-nowrap">Horário</th>
-                <th>Em Jejum?</th>
-                <th>mg/dL</th>
-                <th class="text-nowrap">Horas Jejum</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in itensGlicose" :key="item.id">
-                <td class="text-nowrap">
-                  {{ formatarData(item.data_horario) }}
-                </td>
-                <td class="text-nowrap">
-                  {{ formatarHora(item.data_horario) }}
-                </td>
-                <td>
-                  <span
-                    :class="[
-                      'status-badge',
-                      item.em_jejum ? 'status-jejum' : 'status-normal',
-                    ]"
-                  >
-                    {{ item.em_jejum ? "Sim" : "Não" }}
-                  </span>
-                </td>
-                <td class="fw-bold">{{ item.mg_dl }}</td>
-                <td>
-                  <span
-                    v-if="item.em_jejum && item.horas_jejum"
-                    class="fw-bold"
-                  >
-                    {{ item.horas_jejum }}h
-                  </span>
-                  <span v-else>-</span>
-                </td>
-                <td>
-                  <button
-                    @click="handleDeletar(item.id)"
-                    class="btn btn-sm btn-outline-danger"
-                  >
-                    Excluir
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-else class="text-center p-4 bg-light rounded">
-            Nenhum registro encontrado.
+          <div class="table-responsive shadow-sm rounded-3">
+            <table class="grid-saude mb-0" v-if="itensGlicose.length > 0">
+              <thead>
+                <tr>
+                  <th class="text-nowrap">Data</th>
+                  <th class="text-nowrap">Horário</th>
+                  <th class="text-nowrap">Em Jejum?</th>
+                  <th class="text-nowrap">mg/dL</th>
+                  <th class="text-nowrap">Horas Jejum</th>
+                  <th class="text-nowrap">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in itensGlicose" :key="item.id">
+                  <td class="text-nowrap">
+                    {{ formatarData(item.data_horario) }}
+                  </td>
+                  <td class="text-nowrap">
+                    {{ formatarHora(item.data_horario) }}
+                  </td>
+                  <td>
+                    <span
+                      :class="[
+                        'status-badge',
+                        item.em_jejum ? 'status-jejum' : 'status-normal',
+                      ]"
+                    >
+                      {{ item.em_jejum ? "Sim" : "Não" }}
+                    </span>
+                  </td>
+                  <td class="fw-bold">{{ item.mg_dl }}</td>
+                  <td>
+                    <span
+                      v-if="item.em_jejum && item.horas_jejum"
+                      class="fw-bold"
+                    >
+                      {{ item.horas_jejum }}h
+                    </span>
+                    <span v-else>-</span>
+                  </td>
+                  <td>
+                    <button
+                      @click="handleDeletar(item.id)"
+                      class="btn btn-sm btn-outline-danger"
+                    >
+                      Excluir
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="text-center p-4 bg-light rounded">
+              Nenhum registro encontrado.
+            </div>
           </div>
         </div>
       </div>
@@ -335,14 +331,13 @@ export default {
           </div>
           <div class="modal-body py-4 text-center">
             <p class="mb-0">Tem certeza que deseja excluir este registro?</p>
-            <small class="text-muted">Esta ação não pode ser desfeita.</small>
           </div>
           <div class="modal-footer border-0">
             <button class="btn btn-light px-4" @click="hideDeleteModal">
               Cancelar
             </button>
             <button class="btn btn-danger px-4" @click="confirmarExclusao">
-              Sim, Excluir
+              Excluir
             </button>
           </div>
         </div>
@@ -383,6 +378,8 @@ export default {
 
 .text-nowrap {
   white-space: nowrap;
+  color: #475569;
+  font-weight: bold;
 }
 
 .status-badge {
