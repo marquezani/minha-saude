@@ -3,7 +3,7 @@
     class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top"
   >
     <div class="container">
-      <router-link class="navbar-brand fw-bold" to="/medicoes"
+      <router-link class="navbar-brand fw-bold" to="/dashboard"
         >Minha Saúde</router-link
       >
       <button
