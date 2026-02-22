@@ -93,7 +93,6 @@ export default {
   },
 };
 </script>
-
 <style scoped>
 .nav-link.active {
   color: #0d6efd !important;

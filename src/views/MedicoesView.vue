@@ -54,7 +54,6 @@ export default {
   watch: {
     "form.data"(newVal) {
       if (newVal) {
-        // Cria um objeto Date com a nova data, garantindo que o fuso horário não cause problemas
         const selectedDate = new Date(newVal + "T00:00:00");
         selectedDate.setDate(selectedDate.getDate() - 1); // Subtrai um dia
         this.form.dataInicioJejum = selectedDate.toISOString().substring(0, 10);

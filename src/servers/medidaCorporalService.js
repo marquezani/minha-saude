@@ -3,10 +3,7 @@ import { supabase } from '../https/url';
 export async function obterMedidas() {
     try {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuario_sessao'));
-        if (!usuarioLogado?.id) {
-            console.error("Usuário não logado ou sem ID.");
-            return [];
-        }
+        if (!usuarioLogado?.id) return [];
 
         const { data, error } = await supabase
             .from('medidas_corporais')

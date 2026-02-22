@@ -7,7 +7,7 @@ const router = useRouter();
 const usuario = ref("");
 const password = ref("");
 const errorMessage = ref("");
-const loading = ref(false); // Feedback visual
+const loading = ref(false);
 
 const handleLogin = async () => {
   if (loading.value) return;
@@ -16,8 +16,7 @@ const handleLogin = async () => {
   errorMessage.value = "";
 
   try {
-    // Chama o serviço esperando a resposta do banco
-    const encodedPassword = btoa(password.value); // Codifica a senha para Base64
+    const encodedPassword = btoa(password.value);
     const success = await handler(usuario.value, encodedPassword);
 
     if (success) {
