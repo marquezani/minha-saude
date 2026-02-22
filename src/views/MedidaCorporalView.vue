@@ -7,7 +7,7 @@
           <div class="card shadow-sm border-0 rounded-4">
             <div class="card-body p-4 p-md-5">
               <h3 class="card-title text-center mb-4 fw-bold">
-                Novo Registro Corporal
+                Registro Corporal
               </h3>
               <form @submit.prevent="handleSalvarMedida">
                 <div class="mb-3">
@@ -26,9 +26,8 @@
                       type="number"
                       step="0.1"
                       class="form-control"
-                      v-model="formMedida.peso"
                       placeholder="00.0"
-                      required
+                      v-model.number="formMedida.peso"
                     />
                   </div>
                   <div class="col">
@@ -37,9 +36,8 @@
                       type="number"
                       step="0.1"
                       class="form-control"
-                      v-model="formMedida.circunferencia_abdominal"
                       placeholder="00"
-                      required
+                      v-model.number="formMedida.circunferencia_abdominal"
                     />
                   </div>
                 </div>
@@ -78,9 +76,15 @@
               <tbody>
                 <tr v-for="item in paginatedItems" :key="item.id">
                   <td class="text-nowrap">{{ formatarData(item.data) }}</td>
-                  <td class="fw-bold">{{ item.peso }} kg</td>
                   <td class="fw-bold">
-                    {{ item.circunferencia_abdominal }} cm
+                    {{ item.peso ? item.peso + " kg" : "-" }}
+                  </td>
+                  <td class="fw-bold">
+                    {{
+                      item.circunferencia_abdominal
+                        ? item.circunferencia_abdominal + " cm"
+                        : "-"
+                    }}
                   </td>
                   <td>
                     <button
@@ -242,6 +246,16 @@ export default {
     },
     async handleSalvarMedida() {
       this.enviandoMedida = true;
+
+      if (!this.formMedida.peso && !this.formMedida.circunferencia_abdominal) {
+        this.exibirMensagem(
+          "É obrigatório informar o Peso ou a Cintura.",
+          "error",
+        );
+        this.enviandoMedida = false;
+        return;
+      }
+
       try {
         await salvarMedida(this.formMedida);
 

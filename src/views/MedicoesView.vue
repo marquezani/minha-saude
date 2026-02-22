@@ -180,7 +180,7 @@ export default {
           <div class="card shadow-sm border-0 rounded-4">
             <div class="card-body p-4 p-md-5">
               <h3 class="card-title text-center mb-4 fw-bold">
-                Novo Registro de Glicose
+                Registro de Glicose
               </h3>
 
               <form @submit.prevent="handleSalvar">
