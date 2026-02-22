@@ -17,7 +17,8 @@ const handleLogin = async () => {
 
   try {
     // Chama o serviço esperando a resposta do banco
-    const success = await handler(usuario.value, password.value);
+    const encodedPassword = btoa(password.value); // Codifica a senha para Base64
+    const success = await handler(usuario.value, encodedPassword);
 
     if (success) {
       router.push("/dashboard");
@@ -37,7 +38,7 @@ const handleLogin = async () => {
     class="container vh-100 d-flex justify-content-center align-items-center"
   >
     <div class="card p-4 shadow-sm" style="width: 100%; max-width: 400px">
-      <span class="versao">V 1.6</span>
+      <span class="versao">V 1.7</span>
       <div class="card-body">
         <div class="text-center mb-4">
           <svg
