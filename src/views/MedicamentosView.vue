@@ -5,7 +5,7 @@ import {
   obterHistoricoUso,
   deletarHistoricoUso,
 } from "@/servers/historicoUsoService";
-import { darBaixaEstoque } from "@/servers/estoqueService";
+import { darBaixaEstoque, obterEstoque } from "@/servers/estoqueService";
 import { Modal } from "bootstrap";
 import AppNavbar from "@/components/Navbar.vue";
 
@@ -18,6 +18,7 @@ export default {
       enviando: false,
       historicoUso: [], // Lista do histórico de uso
       medicamentosDisponiveis: [], // Lista de medicamentos para o formulário
+      estoqueItens: [],
       form: {
         medicamento_id: null,
         quantidade_usada: 1,
@@ -46,6 +47,23 @@ export default {
       const end = start + this.itemsPerPage;
       return this.historicoUso.slice(start, end);
     },
+    medicamentosEmEstoque() {
+      if (!this.medicamentosDisponiveis.length || !this.estoqueItens.length) {
+        return [];
+      }
+
+      // Cria um conjunto de IDs de medicamentos que estão em estoque com quantidade > 0
+      const emEstoqueIds = new Set(
+        this.estoqueItens
+          .filter((item) => item.quantidade_estoque > 0)
+          .map((item) => item.medicamento_id),
+      );
+
+      // Filtra a lista de medicamentos para mostrar apenas os que estão em estoque
+      return this.medicamentosDisponiveis.filter((med) =>
+        emEstoqueIds.has(med.id),
+      );
+    },
   },
   methods: {
     exibirMensagem(texto, tipo = "success") {
@@ -70,6 +88,14 @@ export default {
       } catch (err) {
         console.error("Erro ao carregar medicamentos para o formulário:", err);
         this.exibirMensagem("Erro ao carregar lista de medicamentos", "error");
+      }
+    },
+    async carregarEstoque() {
+      try {
+        this.estoqueItens = (await obterEstoque()) || [];
+      } catch (err) {
+        console.error("Erro ao carregar estoque:", err);
+        this.exibirMensagem("Erro ao carregar dados do estoque", "error");
       }
     },
     async handleSalvarUso() {
@@ -150,8 +176,11 @@ export default {
     },
   },
   async mounted() {
-    await this.carregarHistorico();
-    await this.carregarMedicamentos();
+    await Promise.all([
+      this.carregarHistorico(),
+      this.carregarMedicamentos(),
+      this.carregarEstoque(),
+    ]);
     if (this.$refs.deleteModal)
       this.deleteModalInstance = new Modal(this.$refs.deleteModal);
   },
@@ -182,7 +211,7 @@ export default {
                       Selecione um medicamento
                     </option>
                     <option
-                      v-for="med in medicamentosDisponiveis"
+                      v-for="med in medicamentosEmEstoque"
                       :key="med.id"
                       :value="med.id"
                     >
