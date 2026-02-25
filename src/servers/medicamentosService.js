@@ -29,8 +29,9 @@ export async function atualizarMedicamento(id, medicamentoData) {
     if (!userId) {
         throw new Error("Usuário não autenticado. Faça login para atualizar medicamentos.");
     }
-    // Remove o id do medicamentoData para evitar tentar atualizar o próprio id
-    const { id: _, ...dataToUpdate } = medicamentoData;
+    // Cria uma cópia dos dados e remove o 'id' para evitar a tentativa de atualizar a chave primária.
+    const dataToUpdate = { ...medicamentoData };
+    delete dataToUpdate.id;
     const { data, error } = await supabase
         .from('medicamentos')
         .update(dataToUpdate)
