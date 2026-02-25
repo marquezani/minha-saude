@@ -4,7 +4,10 @@ import {
   obterEstoque,
   deletarEstoque,
 } from "@/servers/estoqueService";
-import { obterMedicamentos } from "@/servers/medicamentosService"; // Para obter a lista de medicamentos
+import {
+  obterMedicamentos,
+  salvarMedicamento,
+} from "@/servers/medicamentosService"; // Para obter a lista de medicamentos
 import { Modal } from "bootstrap";
 import AppNavbar from "@/components/Navbar.vue";
 
@@ -21,7 +24,7 @@ export default {
         quantidade_estoque: 0,
         quantidade_minima: 5,
         ativo: true,
-      },
+      }, // <-- Fechamento correto do objeto 'form'
       estoqueItens: [], // Lista de itens de estoque
       medicamentosDisponiveis: [], // Lista de medicamentos para seleção no formulário
       notificacao: { visivel: false, mensagem: "", tipo: "success" },
@@ -30,6 +33,7 @@ export default {
       currentPage: 1,
       itemsPerPage: 10,
       isEditing: false, // Indica se o formulário está em modo de edição
+      searchTerm: "", // Campo para o usuário digitar o nome do medicamento
     };
   },
   computed: {
@@ -49,13 +53,50 @@ export default {
     },
     // Filtra os medicamentos disponíveis para seleção, removendo aqueles que já possuem um registro de estoque,
     // a menos que estejamos editando o próprio registro de estoque desse medicamento.
-    medicamentosParaSelecao() {
-      return this.medicamentosDisponiveis.filter((med) => {
-        return !this.estoqueItens.some(
-          (estoque) =>
-            estoque.medicamento_id === med.id && estoque.id !== this.form.id,
-        );
-      });
+    filteredMedicamentosParaSelecao() {
+      const searchTermLower = this.searchTerm
+        ? this.searchTerm.toLowerCase()
+        : "";
+      return (
+        this.medicamentosDisponiveis
+          .filter((med) => {
+            // Filtra medicamentos que já têm estoque, exceto o que está sendo editado
+            const hasEstoque = this.estoqueItens.some(
+              (estoque) =>
+                estoque.medicamento_id === med.id &&
+                estoque.id !== this.form.id,
+            );
+            return !hasEstoque;
+          })
+          // Filtra pelo termo de busca (nome ou dosagem)
+          .filter(
+            (med) =>
+              med.nome.toLowerCase().includes(searchTermLower) ||
+              (med.dosagem &&
+                med.dosagem.toLowerCase().includes(searchTermLower)),
+          )
+      );
+    },
+    // Propriedade computada para exibir o nome do medicamento no input
+    // e atualizar o searchTerm quando o medicamento_id é alterado (ex: na edição)
+    displayMedicamentoName: {
+      get() {
+        if (this.form.medicamento_id) {
+          const selected = this.medicamentosDisponiveis.find(
+            (med) => med.id === this.form.medicamento_id,
+          );
+          return selected
+            ? `${selected.nome}${
+                selected.dosagem ? " (" + selected.dosagem + ")" : ""
+              }`
+            : this.searchTerm;
+        }
+        return this.searchTerm;
+      },
+      set(value) {
+        this.searchTerm = value;
+        this.updateMedicamentoIdFromSearch(value);
+      },
     },
   },
   methods: {
@@ -86,12 +127,47 @@ export default {
         this.exibirMensagem("Erro ao carregar dados do estoque", "error");
       }
     },
+    // Novo método para atualizar medicamento_id com base no texto digitado
+    updateMedicamentoIdFromSearch(inputString) {
+      const found = this.medicamentosDisponiveis.find((med) => {
+        const displayValue = `${med.nome}${
+          med.dosagem ? " (" + med.dosagem + ")" : ""
+        }`;
+        return displayValue.toLowerCase() === inputString.toLowerCase();
+      });
+      this.form.medicamento_id = found ? found.id : null;
+    },
     async handleSalvar() {
       this.enviando = true;
       try {
+        let medId = this.form.medicamento_id;
+
+        // Se não houver ID de medicamento e houver um termo de busca,
+        // significa que o usuário quer cadastrar um novo medicamento.
+        if (!medId && this.searchTerm) {
+          const novoMedicamento = await salvarMedicamento({
+            nome: this.searchTerm,
+          });
+          if (novoMedicamento && novoMedicamento.id) {
+            medId = novoMedicamento.id;
+          } else {
+            throw new Error("Falha ao criar o novo medicamento.");
+          }
+        }
+
+        // Validação final para garantir que temos um ID de medicamento.
+        if (!medId) {
+          this.exibirMensagem(
+            "Forneça ou selecione um nome de medicamento válido.",
+            "error",
+          );
+          this.enviando = false;
+          return;
+        }
+
         // Prepara os dados para salvar
         const dadosParaSalvar = {
-          medicamento_id: this.form.medicamento_id,
+          medicamento_id: medId,
           quantidade_estoque: parseInt(this.form.quantidade_estoque) || 0,
           quantidade_minima: parseInt(this.form.quantidade_minima) || 5,
           ativo: this.form.ativo,
@@ -99,7 +175,6 @@ export default {
 
         // Se estiver editando, o ID do estoque já estará no form.id e será usado pelo serviço
         // para identificar o registro a ser atualizado.
-
         await salvarEstoque(dadosParaSalvar);
 
         this.exibirMensagem("Estoque salvo com sucesso!");
@@ -107,8 +182,11 @@ export default {
         await this.carregarEstoqueDados(); // Recarrega a lista de estoque
         await this.carregarMedicamentos(); // Recarrega medicamentos para atualizar opções de seleção
       } catch (err) {
-        console.error("Erro detalhado ao salvar estoque:", err);
-        this.exibirMensagem("Erro ao salvar o estoque.", "error");
+        console.error("Erro detalhado ao salvar estoque:", err.message);
+        this.exibirMensagem(
+          err.message || "Erro ao salvar o estoque.",
+          "error",
+        );
       } finally {
         this.enviando = false;
       }
@@ -121,6 +199,7 @@ export default {
         quantidade_minima: 5,
         ativo: true,
       };
+      this.searchTerm = ""; // Limpa o termo de busca
       this.isEditing = false;
     },
     handleEditar(item) {
@@ -129,6 +208,8 @@ export default {
       // Garante que os campos numéricos sejam tratados como números
       this.form.quantidade_estoque = parseInt(item.quantidade_estoque);
       this.form.quantidade_minima = parseInt(item.quantidade_minima);
+      this.form.medicamento_id = item.medicamento_id; // Garante que o ID do medicamento esteja no form
+      this.searchTerm = item.medicamentos.nome; // Preenche o campo de busca com o nome do medicamento
       this.isEditing = true;
       // Rola para o topo da página para exibir o formulário de edição
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -144,6 +225,7 @@ export default {
       try {
         await deletarEstoque(this.itemParaDeletarId);
         this.exibirMensagem("Item de estoque excluído!");
+        this.resetForm(); // Limpa o formulário após exclusão
         await this.carregarEstoqueDados(); // Recarrega a lista de estoque
         await this.carregarMedicamentos(); // Recarrega medicamentos para atualizar opções de seleção
         if (this.currentPage > this.totalPages) {
@@ -208,43 +290,25 @@ export default {
               <form @submit.prevent="handleSalvar">
                 <div class="mb-3">
                   <label class="form-label">Medicamento</label>
-                  <select
-                    class="form-select"
-                    v-model="form.medicamento_id"
-                    required
+                  <input
+                    type="text"
+                    class="form-control"
+                    list="medicamentos-datalist"
+                    v-model="displayMedicamentoName"
+                    placeholder="Digite o nome do medicamento..."
                     :disabled="isEditing"
-                  >
-                    <option :value="null" disabled>
-                      Selecione um Medicamento
-                    </option>
+                    required
+                  />
+                  <datalist id="medicamentos-datalist">
                     <option
-                      v-for="med in medicamentosParaSelecao"
+                      v-for="med in filteredMedicamentosParaSelecao"
                       :key="med.id"
-                      :value="med.id"
-                    >
-                      {{ med.nome }} {{ med.dosagem ? `(${med.dosagem})` : "" }}
-                    </option>
-                    <!-- Se estiver editando e o medicamento atual não estiver na lista filtrada, exibe-o -->
-                    <option
-                      v-if="
-                        isEditing &&
-                        form.medicamento_id &&
-                        !medicamentosParaSelecao.some(
-                          (m) => m.id === form.medicamento_id,
-                        )
-                      "
-                      :value="form.medicamento_id"
-                      selected
-                    >
-                      {{ form.medicamentos.nome }}
-                      {{
-                        form.medicamentos.dosagem
-                          ? `(${form.medicamentos.dosagem})`
-                          : ""
-                      }}
-                      (Atual)
-                    </option>
-                  </select>
+                      :value="`${med.nome}${
+                        med.dosagem ? ' (' + med.dosagem + ')' : ''
+                      }`"
+                    ></option>
+                  </datalist>
+
                   <div v-if="isEditing" class="form-text text-muted">
                     O medicamento não pode ser alterado durante a edição de um
                     item de estoque existente.
@@ -291,7 +355,9 @@ export default {
                   <button
                     type="submit"
                     class="btn btn-primary btn-lg fw-bold"
-                    :disabled="enviando || !form.medicamento_id"
+                    :disabled="
+                      enviando || (!form.medicamento_id && !searchTerm)
+                    "
                   >
                     {{
                       enviando

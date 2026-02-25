@@ -17,7 +17,24 @@ export async function salvarMedicamento(medicamentoData) {
     }
     const { data, error } = await supabase
         .from('medicamentos')
-        .insert([{ ...medicamentoData, usuario_id: userId }]);
+        .insert({ ...medicamentoData, usuario_id: userId })
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function atualizarMedicamento(id, medicamentoData) {
+    const userId = getUserId();
+    if (!userId) {
+        throw new Error("Usuário não autenticado. Faça login para atualizar medicamentos.");
+    }
+    // Remove o id do medicamentoData para evitar tentar atualizar o próprio id
+    const { id: _, ...dataToUpdate } = medicamentoData;
+    const { data, error } = await supabase
+        .from('medicamentos')
+        .update(dataToUpdate)
+        .eq('id', id); // Atualiza o registro com o ID fornecido
     if (error) throw error;
     return data;
 }

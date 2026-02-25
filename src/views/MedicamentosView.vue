@@ -1,5 +1,6 @@
 <script>
 import {
+  atualizarMedicamento,
   salvarMedicamento,
   obterMedicamentos,
   deletarMedicamento,
@@ -16,6 +17,7 @@ export default {
       enviando: false,
       itensMedicamento: [], // Lista de medicamentos
       form: {
+        id: null,
         nome: "",
         dosagem: "",
         tipo: "", // Novo campo
@@ -28,6 +30,7 @@ export default {
       itemParaDeletarId: null,
       currentPage: 1,
       itemsPerPage: 10,
+      isEditing: false,
     };
   },
   computed: {
@@ -72,25 +75,46 @@ export default {
         dadosParaSalvar.quantidade_uso_dose =
           parseInt(dadosParaSalvar.quantidade_uso_dose) || 1;
 
-        await salvarMedicamento(dadosParaSalvar);
+        if (this.isEditing) {
+          await atualizarMedicamento(this.form.id, dadosParaSalvar);
+        } else {
+          await salvarMedicamento(dadosParaSalvar);
+        }
 
-        this.exibirMensagem("Medicamento salvo com sucesso!");
+        this.exibirMensagem(
+          `Medicamento ${this.isEditing ? "atualizado" : "salvo"} com sucesso!`,
+        );
         // Limpa o formulário ou redefine para valores iniciais
-        this.form = {
-          nome: "",
-          dosagem: "",
-          tipo: "",
-          periodo: "",
-          quantidade_uso_dose: 1, // Reset para o valor padrão
-          observacao: "",
-        };
+        this.resetForm();
         await this.carregarDados();
       } catch (err) {
-        console.error("Erro detalhado ao salvar medicamento:", err);
         this.exibirMensagem("Erro ao salvar o medicamento.", "error");
       } finally {
         this.enviando = false;
       }
+    },
+    resetForm() {
+      this.form = {
+        id: null,
+        nome: "",
+        dosagem: "",
+        tipo: "",
+        periodo: "",
+        quantidade_uso_dose: 1,
+        observacao: "",
+      };
+      this.isEditing = false;
+    },
+    handleMedicamentoSelection(event) {
+      const medicamentoId = event.target.value;
+      const selectedMedicamento = this.itensMedicamento.find(
+        (item) => item.id === medicamentoId,
+      );
+      if (selectedMedicamento) {
+        this.form = { ...selectedMedicamento };
+        this.isEditing = true;
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
     },
     handleDeletar(id) {
       this.itemParaDeletarId = id;
@@ -113,15 +137,6 @@ export default {
       } finally {
         this.hideDeleteModal();
       }
-    },
-    formatarData(iso) {
-      if (!iso) return "-";
-      return new Date(iso + "T00:00:00").toLocaleDateString("pt-BR"); // Adiciona T00:00:00 para evitar problemas de fuso horário
-    },
-    formatarHora(timeString) {
-      if (!timeString) return "-";
-      // Assumindo que timeString já está no formato HH:MM
-      return timeString;
     },
     nextPage() {
       if (this.currentPage < this.totalPages) {
@@ -154,10 +169,31 @@ export default {
           <div class="card shadow-sm border-0 rounded-4">
             <div class="card-body p-4 p-md-5">
               <h3 class="card-title text-center mb-4 fw-bold">
-                Registro de Medicamentos
+                {{ isEditing ? "Editar Medicamento" : "Novo Medicamento" }}
               </h3>
 
               <form @submit.prevent="handleSalvar">
+                <div class="mb-3">
+                  <label class="form-label">Medicamento</label>
+                  <select
+                    class="form-select"
+                    v-model="form.id"
+                    @change="handleMedicamentoSelection($event)"
+                  >
+                    <option :value="null" disabled>
+                      Selecione um Medicamento
+                    </option>
+                    <option
+                      v-for="item in itensMedicamento"
+                      :key="item.id"
+                      :value="item.id"
+                    >
+                      {{ item.nome }}
+                      {{ item.dosagem ? `(${item.dosagem})` : "" }}
+                    </option>
+                  </select>
+                </div>
+
                 <div class="mb-3">
                   <label class="form-label">Nome do Medicamento</label>
                   <input
@@ -227,7 +263,21 @@ export default {
                     class="btn btn-primary btn-lg fw-bold"
                     :disabled="enviando"
                   >
-                    {{ enviando ? "Salvando..." : "Salvar Medicamento" }}
+                    {{
+                      enviando
+                        ? "Salvando..."
+                        : isEditing
+                        ? "Atualizar Medicamento"
+                        : "Salvar Medicamento"
+                    }}
+                  </button>
+                  <button
+                    v-if="isEditing"
+                    type="button"
+                    class="btn btn-outline-secondary mt-2"
+                    @click="resetForm"
+                  >
+                    Cancelar Edição
                   </button>
                 </div>
               </form>
@@ -238,7 +288,7 @@ export default {
 
       <div class="row justify-content-center mt-5 mb-5">
         <div class="col-md-10">
-          <h4 class="mb-3">Meus Medicamentos</h4>
+          <h4 class="mb-3">Lista de Medicamentos</h4>
 
           <div
             class="table-responsive shadow-sm rounded-3"
@@ -263,6 +313,16 @@ export default {
                   <td>{{ item.periodo || "-" }}</td>
                   <td>{{ item.quantidade_uso_dose || 1 }}</td>
                   <td>
+                    <button
+                      @click="
+                        handleMedicamentoSelection({
+                          target: { value: item.id },
+                        })
+                      "
+                      class="btn btn-sm btn-outline-primary me-2"
+                    >
+                      Editar
+                    </button>
                     <button
                       @click="handleDeletar(item.id)"
                       class="btn btn-sm btn-outline-danger"
