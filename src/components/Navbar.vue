@@ -71,6 +71,14 @@
               >Medidas Corporais</router-link
             >
           </li>
+          <li class="nav-item">
+            <router-link
+              class="nav-link"
+              active-class="active fw-bold"
+              to="/medicamentos"
+              >Medicamentos</router-link
+            >
+          </li>
         </ul>
         <button @click="handleLogout" class="btn btn-outline-danger">
           Sair
