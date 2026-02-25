@@ -1,10 +1,11 @@
 <script>
+import { obterMedicamentos } from "@/servers/medicamentosService";
 import {
-  atualizarMedicamento,
-  salvarMedicamento,
-  obterMedicamentos,
-  deletarMedicamento,
-} from "@/servers/medicamentosService"; // Importa o novo serviço
+  salvarUsoMedicamento,
+  obterHistoricoUso,
+  deletarHistoricoUso,
+} from "@/servers/historicoUsoService";
+import { darBaixaEstoque } from "@/servers/estoqueService";
 import { Modal } from "bootstrap";
 import AppNavbar from "@/components/Navbar.vue";
 
@@ -15,14 +16,12 @@ export default {
   data() {
     return {
       enviando: false,
-      itensMedicamento: [], // Lista de medicamentos
+      historicoUso: [], // Lista do histórico de uso
+      medicamentosDisponiveis: [], // Lista de medicamentos para o formulário
       form: {
-        id: null,
-        nome: "",
-        dosagem: "",
-        tipo: "", // Novo campo
-        periodo: "", // Novo campo
-        quantidade_uso_dose: 1,
+        medicamento_id: null,
+        quantidade_usada: 1,
+        data_hora_uso: new Date().toISOString().slice(0, 16), // Formato 'YYYY-MM-DDTHH:mm'
         observacao: "",
       },
       notificacao: { visivel: false, mensagem: "", tipo: "success" },
@@ -30,23 +29,22 @@ export default {
       itemParaDeletarId: null,
       currentPage: 1,
       itemsPerPage: 10,
-      isEditing: false,
     };
   },
   computed: {
     totalPages() {
-      if (!this.itensMedicamento || this.itensMedicamento.length === 0) {
+      if (!this.historicoUso || this.historicoUso.length === 0) {
         return 1;
       }
-      return Math.ceil(this.itensMedicamento.length / this.itemsPerPage);
+      return Math.ceil(this.historicoUso.length / this.itemsPerPage);
     },
     paginatedItems() {
-      if (!this.itensMedicamento || this.itensMedicamento.length === 0) {
+      if (!this.historicoUso || this.historicoUso.length === 0) {
         return [];
       }
       const start = (this.currentPage - 1) * this.itemsPerPage;
       const end = start + this.itemsPerPage;
-      return this.itensMedicamento.slice(start, end);
+      return this.historicoUso.slice(start, end);
     },
   },
   methods: {
@@ -58,63 +56,60 @@ export default {
         this.notificacao.visivel = false;
       }, 3000);
     },
-    async carregarDados() {
+    async carregarHistorico() {
       try {
-        this.itensMedicamento = (await obterMedicamentos()) || [];
+        this.historicoUso = (await obterHistoricoUso()) || [];
       } catch (err) {
-        console.error("Erro ao carregar medicamentos:", err);
-        this.exibirMensagem("Erro ao carregar medicamentos", "error");
+        console.error("Erro ao carregar histórico:", err);
+        this.exibirMensagem("Erro ao carregar histórico de uso", "error");
       }
     },
-    async handleSalvar() {
+    async carregarMedicamentos() {
+      try {
+        this.medicamentosDisponiveis = (await obterMedicamentos()) || [];
+      } catch (err) {
+        console.error("Erro ao carregar medicamentos para o formulário:", err);
+        this.exibirMensagem("Erro ao carregar lista de medicamentos", "error");
+      }
+    },
+    async handleSalvarUso() {
       this.enviando = true;
       try {
-        // Prepara os dados para salvar, garantindo que números sejam números e datas sejam strings
-        const dadosParaSalvar = { ...this.form };
-        // Garante que quantidade_uso_dose seja um número inteiro
-        dadosParaSalvar.quantidade_uso_dose =
-          parseInt(dadosParaSalvar.quantidade_uso_dose) || 1;
-
-        if (this.isEditing) {
-          await atualizarMedicamento(this.form.id, dadosParaSalvar);
-        } else {
-          await salvarMedicamento(dadosParaSalvar);
+        if (!this.form.medicamento_id) {
+          this.exibirMensagem("Por favor, selecione um medicamento.", "error");
+          return;
         }
 
-        this.exibirMensagem(
-          `Medicamento ${this.isEditing ? "atualizado" : "salvo"} com sucesso!`,
-        );
-        // Limpa o formulário ou redefine para valores iniciais
+        const dadosParaSalvar = {
+          ...this.form,
+          quantidade_usada: parseInt(this.form.quantidade_usada) || 1,
+        };
+
+        // Inicia as duas operações em paralelo
+        await Promise.all([
+          salvarUsoMedicamento(dadosParaSalvar),
+          darBaixaEstoque(
+            dadosParaSalvar.medicamento_id,
+            dadosParaSalvar.quantidade_usada,
+          ),
+        ]);
+
+        this.exibirMensagem("Uso de medicamento registrado com sucesso!");
         this.resetForm();
-        await this.carregarDados();
+        await this.carregarHistorico();
       } catch (err) {
-        this.exibirMensagem("Erro ao salvar o medicamento.", "error");
+        this.exibirMensagem(err.message || "Erro ao registrar o uso.", "error");
       } finally {
         this.enviando = false;
       }
     },
     resetForm() {
       this.form = {
-        id: null,
-        nome: "",
-        dosagem: "",
-        tipo: "",
-        periodo: "",
-        quantidade_uso_dose: 1,
+        medicamento_id: null,
+        quantidade_usada: 1,
+        data_hora_uso: new Date().toISOString().slice(0, 16),
         observacao: "",
       };
-      this.isEditing = false;
-    },
-    handleMedicamentoSelection(event) {
-      const medicamentoId = event.target.value;
-      const selectedMedicamento = this.itensMedicamento.find(
-        (item) => item.id === medicamentoId,
-      );
-      if (selectedMedicamento) {
-        this.form = { ...selectedMedicamento };
-        this.isEditing = true;
-      }
-      window.scrollTo({ top: 0, behavior: "smooth" });
     },
     handleDeletar(id) {
       this.itemParaDeletarId = id;
@@ -125,15 +120,17 @@ export default {
     },
     async confirmarExclusao() {
       try {
-        await deletarMedicamento(this.itemParaDeletarId);
-        this.exibirMensagem("Medicamento excluído!");
-        await this.carregarDados();
+        // ATENÇÃO: Ao excluir um registro de uso, o estoque NÃO é devolvido automaticamente.
+        // Isso precisaria de uma lógica mais complexa se desejado.
+        await deletarHistoricoUso(this.itemParaDeletarId);
+        this.exibirMensagem("Registro de uso excluído!");
+        await this.carregarHistorico();
         if (this.currentPage > this.totalPages) {
           this.currentPage = this.totalPages;
         }
       } catch (err) {
-        console.error("Erro ao excluir medicamento:", err);
-        this.exibirMensagem("Erro ao excluir medicamento", "error");
+        console.error("Erro ao excluir registro de uso:", err);
+        this.exibirMensagem("Erro ao excluir registro", "error");
       } finally {
         this.hideDeleteModal();
       }
@@ -152,8 +149,9 @@ export default {
       this.currentPage = page;
     },
   },
-  mounted() {
-    this.carregarDados();
+  async mounted() {
+    await this.carregarHistorico();
+    await this.carregarMedicamentos();
     if (this.$refs.deleteModal)
       this.deleteModalInstance = new Modal(this.$refs.deleteModal);
   },
@@ -169,91 +167,58 @@ export default {
           <div class="card shadow-sm border-0 rounded-4">
             <div class="card-body p-4 p-md-5">
               <h3 class="card-title text-center mb-4 fw-bold">
-                {{ isEditing ? "Editar Medicamento" : "Novo Medicamento" }}
+                Registrar Uso de Medicamento
               </h3>
 
-              <form @submit.prevent="handleSalvar">
+              <form @submit.prevent="handleSalvarUso">
                 <div class="mb-3">
                   <label class="form-label">Medicamento</label>
                   <select
                     class="form-select"
-                    v-model="form.id"
-                    @change="handleMedicamentoSelection($event)"
+                    v-model="form.medicamento_id"
+                    required
                   >
                     <option :value="null" disabled>
-                      Selecione um Medicamento
+                      Selecione um medicamento
                     </option>
                     <option
-                      v-for="item in itensMedicamento"
-                      :key="item.id"
-                      :value="item.id"
+                      v-for="med in medicamentosDisponiveis"
+                      :key="med.id"
+                      :value="med.id"
                     >
-                      {{ item.nome }}
-                      {{ item.dosagem ? `(${item.dosagem})` : "" }}
+                      {{ med.nome }} {{ med.dosagem ? `(${med.dosagem})` : "" }}
                     </option>
                   </select>
                 </div>
 
-                <div class="mb-3">
-                  <label class="form-label">Nome do Medicamento</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    v-model="form.nome"
-                    required
-                  />
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Dosagem</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    v-model="form.dosagem"
-                  />
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Tipo</label>
-                  <select class="form-select" v-model="form.tipo">
-                    <option value="">Selecione o Tipo</option>
-                    <option value="Comprimido">Comprimido</option>
-                    <option value="Gotas">Gotas</option>
-                    <option value="Pomada">Pomada</option>
-                    <option value="Xarope">Xarope</option>
-                    <option value="Injeção">Injeção</option>
-                    <option value="Outro">Outro</option>
-                  </select>
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Período de Uso</label>
-                  <select class="form-select" v-model="form.periodo">
-                    <option value="">Selecione o Período</option>
-                    <option value="Manhã">Manhã</option>
-                    <option value="Tarde">Tarde</option>
-                    <option value="Noite">Noite</option>
-                    <option value="Manhã/Noite">Manhã/Noite</option>
-                    <option value="Personalizado">Personalizado</option>
-                  </select>
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Quantidade por Dose</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    v-model="form.quantidade_uso_dose"
-                    min="1"
-                  />
+                <div class="row mb-3">
+                  <div class="col-md-8">
+                    <label class="form-label">Data e Hora do Uso</label>
+                    <input
+                      type="datetime-local"
+                      class="form-control"
+                      v-model="form.data_hora_uso"
+                      required
+                    />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Quantidade</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      v-model="form.quantidade_usada"
+                      min="1"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div class="mb-4">
-                  <label class="form-label">Observação</label>
+                  <label class="form-label">Observação (Opcional)</label>
                   <textarea
                     class="form-control"
                     v-model="form.observacao"
-                    rows="3"
+                    rows="2"
                   ></textarea>
                 </div>
 
@@ -263,21 +228,7 @@ export default {
                     class="btn btn-primary btn-lg fw-bold"
                     :disabled="enviando"
                   >
-                    {{
-                      enviando
-                        ? "Salvando..."
-                        : isEditing
-                        ? "Atualizar Medicamento"
-                        : "Salvar Medicamento"
-                    }}
-                  </button>
-                  <button
-                    v-if="isEditing"
-                    type="button"
-                    class="btn btn-outline-secondary mt-2"
-                    @click="resetForm"
-                  >
-                    Cancelar Edição
+                    {{ enviando ? "Salvando..." : "Registrar Uso" }}
                   </button>
                 </div>
               </form>
@@ -288,7 +239,7 @@ export default {
 
       <div class="row justify-content-center mt-5 mb-5">
         <div class="col-md-10">
-          <h4 class="mb-3">Lista de Medicamentos</h4>
+          <h4 class="mb-3">Histórico de Uso</h4>
 
           <div
             class="table-responsive shadow-sm rounded-3"
@@ -297,35 +248,33 @@ export default {
             <table class="grid-saude mb-0">
               <thead>
                 <tr>
-                  <th class="text-nowrap">Nome</th>
-                  <th class="text-nowrap">Dosagem</th>
-                  <th class="text-nowrap">Tipo</th>
-                  <th class="text-nowrap">Período</th>
-                  <th class="text-nowrap">Qtd/Dose</th>
+                  <th class="text-nowrap">Medicamento</th>
+                  <th class="text-nowrap">Data e Hora</th>
+                  <th class="text-nowrap">Qtd. Usada</th>
+                  <th class="text-nowrap">Observação</th>
                   <th class="text-nowrap">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="item in paginatedItems" :key="item.id">
-                  <td class="text-nowrap">{{ item.nome }}</td>
-                  <td class="text-nowrap">{{ item.dosagem || "-" }}</td>
-                  <td>{{ item.tipo || "-" }}</td>
-                  <td>{{ item.periodo || "-" }}</td>
-                  <td>{{ item.quantidade_uso_dose || 1 }}</td>
+                  <td class="text-nowrap">
+                    {{ item.medicamentos.nome }}
+                    {{
+                      item.medicamentos.dosagem
+                        ? `(${item.medicamentos.dosagem})`
+                        : ""
+                    }}
+                  </td>
+                  <td class="text-nowrap">
+                    {{ new Date(item.data_hora_uso).toLocaleString("pt-BR") }}
+                  </td>
+                  <td>{{ item.quantidade_usada }}</td>
+                  <td>{{ item.observacao || "-" }}</td>
                   <td>
-                    <button
-                      @click="
-                        handleMedicamentoSelection({
-                          target: { value: item.id },
-                        })
-                      "
-                      class="btn btn-sm btn-outline-primary me-2"
-                    >
-                      Editar
-                    </button>
                     <button
                       @click="handleDeletar(item.id)"
                       class="btn btn-sm btn-outline-danger"
+                      :disabled="enviando"
                     >
                       Excluir
                     </button>
@@ -335,7 +284,7 @@ export default {
             </table>
           </div>
           <div v-else class="text-center p-4 bg-light rounded">
-            Nenhum medicamento registrado.
+            Nenhum uso de medicamento registrado.
           </div>
 
           <div v-if="totalPages > 1" class="d-flex justify-content-center mt-4">
@@ -400,7 +349,9 @@ export default {
             ></button>
           </div>
           <div class="modal-body py-4 text-center">
-            <p class="mb-0">Tem certeza que deseja excluir este medicamento?</p>
+            <p class="mb-0">
+              Tem certeza que deseja excluir este registro de uso?
+            </p>
           </div>
           <div class="modal-footer border-0">
             <button class="btn btn-light px-4" @click="hideDeleteModal">
