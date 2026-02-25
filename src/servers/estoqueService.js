@@ -37,36 +37,23 @@ export async function deletarEstoque(id) {
 
 /**
  * Registra o uso de um medicamento, diminuindo a quantidade em estoque.
+ * Isso é feito chamando uma função (RPC) no banco de dados.
  * @param {string} medicamentoId - O ID do medicamento que foi usado.
  * @param {number} quantidadeParaBaixa - A quantidade a ser subtraída do estoque.
  * @returns {Promise<void>}
  */
 export async function darBaixaEstoque(medicamentoId, quantidadeParaBaixa = 1) {
-    // 1. Obter o item de estoque atual para pegar a quantidade
-    const { data: estoque, error: estoqueError } = await supabase
-        .from('estoque_medicamentos')
-        .select('id, quantidade_estoque')
-        .eq('medicamento_id', medicamentoId)
-        .single();
+    const { error } = await supabase.rpc('dar_baixa_estoque', {
+        p_medicamento_id: medicamentoId,
+        p_quantidade_usada: quantidadeParaBaixa
+    });
 
-    // Se não houver registro de estoque, não é possível dar baixa.
-    if (estoqueError || !estoque) {
-        throw new Error('Não há registro de estoque para este medicamento. Adicione-o na tela de Estoque.');
-    }
-
-    // 2. Calcular novo estoque e atualizar
-    const novoEstoque = estoque.quantidade_estoque - quantidadeParaBaixa;
-
-    const { error: updateError } = await supabase
-        .from('estoque_medicamentos')
-        .update({
-            quantidade_estoque: novoEstoque < 0 ? 0 : novoEstoque, // Previne estoque negativo
-            ultima_atualizacao: new Date().toISOString()
-        })
-        .eq('id', estoque.id);
-
-    if (updateError) {
-        console.error('Erro ao atualizar estoque:', updateError);
+    if (error) {
+        console.error('Erro ao chamar RPC para dar baixa no estoque:', error);
+        // Se o erro for a função não existir, dá uma dica mais clara.
+        if (error.code === '42883') { // "42883" is "undefined_function" in PostgreSQL
+            throw new Error('Função "dar_baixa_estoque" não encontrada no banco de dados. Por favor, crie a função no editor SQL do Supabase.');
+        }
         throw new Error('Não foi possível atualizar o estoque do medicamento.');
     }
 }
