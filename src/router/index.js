@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import MedicoesView from '../views/MedicoesView.vue'
 import MedidaCorporalView from '../views/MedidaCorporalView.vue'
+import EstoqueMedicamentosView from '../views/EstoqueMedicamentosView.vue' // Importe o novo componente
 import MedicamentosView from '../views/MedicamentosView.vue' // Importe o novo componente
 import DashboardView from '../views/DashboardView.vue'
 import { isAuthenticated } from '../servers/authService'
@@ -36,6 +37,12 @@ const router = createRouter({
             path: '/medicamentos',
             name: 'medicamentos',
             component: MedicamentosView,
+            meta: { requiresAuth: true } // Garante que apenas usuários autenticados possam acessar
+        },
+        {
+            path: '/estoque-medicamentos', // Nova rota para o estoque
+            name: 'estoque-medicamentos',
+            component: EstoqueMedicamentosView,
             meta: { requiresAuth: true } // Garante que apenas usuários autenticados possam acessar
         }
     ]

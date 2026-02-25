@@ -18,15 +18,9 @@ export default {
       form: {
         nome: "",
         dosagem: "",
-        frequencia_horas: null,
-        horario_inicio: new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        data_inicio: new Date().toISOString().substring(0, 10),
-        data_fim: null, // Opcional
-        estoque_atual: 0,
-        alerta_estoque_baixo: 5,
+        tipo: "", // Novo campo
+        periodo: "", // Novo campo
+        quantidade_uso_dose: 1,
         observacao: "",
       },
       notificacao: { visivel: false, mensagem: "", tipo: "success" },
@@ -73,19 +67,10 @@ export default {
       this.enviando = true;
       try {
         // Prepara os dados para salvar, garantindo que números sejam números e datas sejam strings
-        const dadosParaSalvar = {
-          ...this.form,
-          frequencia_horas: this.form.frequencia_horas
-            ? parseInt(this.form.frequencia_horas)
-            : null,
-          estoque_atual: this.form.estoque_atual
-            ? parseInt(this.form.estoque_atual)
-            : 0,
-          alerta_estoque_baixo: this.form.alerta_estoque_baixo
-            ? parseInt(this.form.alerta_estoque_baixo)
-            : 5,
-          // data_fim pode ser null, então não precisa de conversão se já for string ou null
-        };
+        const dadosParaSalvar = { ...this.form };
+        // Garante que quantidade_uso_dose seja um número inteiro
+        dadosParaSalvar.quantidade_uso_dose =
+          parseInt(dadosParaSalvar.quantidade_uso_dose) || 1;
 
         await salvarMedicamento(dadosParaSalvar);
 
@@ -94,15 +79,9 @@ export default {
         this.form = {
           nome: "",
           dosagem: "",
-          frequencia_horas: null,
-          horario_inicio: new Date().toLocaleTimeString("pt-BR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          data_inicio: new Date().toISOString().substring(0, 10),
-          data_fim: null,
-          estoque_atual: 0,
-          alerta_estoque_baixo: 5,
+          tipo: "",
+          periodo: "",
+          quantidade_uso_dose: 1, // Reset para o valor padrão
           observacao: "",
         };
         await this.carregarDados();
@@ -198,65 +177,39 @@ export default {
                   />
                 </div>
 
-                <div class="row mb-3">
-                  <div class="col-md-6">
-                    <label class="form-label">Frequência (horas)</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      v-model="form.frequencia_horas"
-                      min="1"
-                    />
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Horário de Início</label>
-                    <input
-                      type="time"
-                      class="form-control"
-                      v-model="form.horario_inicio"
-                    />
-                  </div>
+                <div class="mb-3">
+                  <label class="form-label">Tipo</label>
+                  <select class="form-select" v-model="form.tipo">
+                    <option value="">Selecione o Tipo</option>
+                    <option value="Comprimido">Comprimido</option>
+                    <option value="Gotas">Gotas</option>
+                    <option value="Pomada">Pomada</option>
+                    <option value="Xarope">Xarope</option>
+                    <option value="Injeção">Injeção</option>
+                    <option value="Outro">Outro</option>
+                  </select>
                 </div>
 
-                <div class="row mb-3">
-                  <div class="col-md-6">
-                    <label class="form-label">Data de Início</label>
-                    <input
-                      type="date"
-                      class="form-control"
-                      v-model="form.data_inicio"
-                      required
-                    />
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Data de Fim (Opcional)</label>
-                    <input
-                      type="date"
-                      class="form-control"
-                      v-model="form.data_fim"
-                    />
-                  </div>
+                <div class="mb-3">
+                  <label class="form-label">Período de Uso</label>
+                  <select class="form-select" v-model="form.periodo">
+                    <option value="">Selecione o Período</option>
+                    <option value="Manhã">Manhã</option>
+                    <option value="Tarde">Tarde</option>
+                    <option value="Noite">Noite</option>
+                    <option value="Manhã/Noite">Manhã/Noite</option>
+                    <option value="Personalizado">Personalizado</option>
+                  </select>
                 </div>
 
-                <div class="row mb-3">
-                  <div class="col-md-6">
-                    <label class="form-label">Estoque Atual</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      v-model="form.estoque_atual"
-                      min="0"
-                    />
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Alerta Estoque Baixo</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      v-model="form.alerta_estoque_baixo"
-                      min="0"
-                    />
-                  </div>
+                <div class="mb-3">
+                  <label class="form-label">Quantidade por Dose</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    v-model="form.quantidade_uso_dose"
+                    min="1"
+                  />
                 </div>
 
                 <div class="mb-4">
@@ -296,11 +249,9 @@ export default {
                 <tr>
                   <th class="text-nowrap">Nome</th>
                   <th class="text-nowrap">Dosagem</th>
-                  <th class="text-nowrap">Freq.</th>
-                  <th class="text-nowrap">Início</th>
-                  <th class="text-nowrap">Fim</th>
-                  <th class="text-nowrap">Estoque</th>
-                  <th class="text-nowrap">Alerta</th>
+                  <th class="text-nowrap">Tipo</th>
+                  <th class="text-nowrap">Período</th>
+                  <th class="text-nowrap">Qtd/Dose</th>
                   <th class="text-nowrap">Ações</th>
                 </tr>
               </thead>
@@ -308,21 +259,9 @@ export default {
                 <tr v-for="item in paginatedItems" :key="item.id">
                   <td class="text-nowrap">{{ item.nome }}</td>
                   <td class="text-nowrap">{{ item.dosagem || "-" }}</td>
-                  <td>
-                    <span v-if="item.frequencia_horas" class="fw-bold">
-                      {{ item.frequencia_horas }}h
-                    </span>
-                    <span v-else>-</span>
-                  </td>
-                  <td class="text-nowrap">
-                    {{ formatarData(item.data_inicio) }} às
-                    {{ formatarHora(item.horario_inicio) }}
-                  </td>
-                  <td class="text-nowrap">
-                    {{ formatarData(item.data_fim) }}
-                  </td>
-                  <td>{{ item.estoque_atual }}</td>
-                  <td>{{ item.alerta_estoque_baixo }}</td>
+                  <td>{{ item.tipo || "-" }}</td>
+                  <td>{{ item.periodo || "-" }}</td>
+                  <td>{{ item.quantidade_uso_dose || 1 }}</td>
                   <td>
                     <button
                       @click="handleDeletar(item.id)"
