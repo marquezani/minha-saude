@@ -80,6 +80,87 @@ textarea.form-control {
   opacity: 0.65;
 }
 
+/* Estilos para outros botões para manter a consistência */
+
+/* Botão de Perigo (Excluir, Sair) */
+.btn-danger {
+  background-color: var(--danger-color) !important;
+  color: white !important;
+  border-color: var(--danger-color) !important;
+  transition: filter 0.2s;
+}
+.btn-danger:hover {
+  filter: brightness(0.9);
+}
+
+/* Botão de Perigo (Contorno) */
+.btn-outline-danger {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+  transition: all 0.2s;
+}
+.btn-outline-danger:hover {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+/* Botão Secundário (Contorno) */
+.btn-outline-secondary {
+  color: var(--text-secondary);
+  border-color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.btn-outline-secondary:hover {
+  background-color: var(--text-secondary);
+  color: white;
+}
+
+/* Botão Neutro (Cancelar em modais) */
+.btn-light {
+  background-color: var(--card-bg) !important;
+  border-color: #dee2e6 !important; /* Cinza claro para borda */
+  color: var(--text-primary) !important;
+  transition: all 0.2s;
+}
+.btn-light:hover {
+  background-color: var(--input-bg) !important; /* Efeito sutil no hover */
+}
+
+/* Botão de Ação (Contorno) - para seletores e ações secundárias */
+.btn-outline-action {
+  color: var(--action-color);
+  border-color: var(--action-color);
+  transition: all 0.2s;
+}
+
+.btn-check:checked + .btn-outline-action,
+.btn-outline-action:hover {
+  background-color: var(--action-color);
+  color: white;
+  border-color: var(--action-color);
+}
+
+/* Estilos para Paginação */
+.pagination .page-link {
+  color: var(--action-color);
+  background-color: var(--card-bg);
+  border-color: #dee2e6;
+  transition: all 0.2s;
+}
+.pagination .page-link:hover {
+  background-color: var(--input-bg);
+  color: var(--action-color);
+}
+.pagination .page-item.active .page-link {
+  background-color: var(--action-color);
+  border-color: var(--action-color);
+  color: white;
+  z-index: 2;
+}
+.pagination .page-item.disabled .page-link {
+  color: var(--text-secondary);
+}
+
 /* Estilos da Tabela */
 .grid-saude {
   width: 100%;

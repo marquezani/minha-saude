@@ -206,7 +206,7 @@ onMounted(() => {
                       value="sim"
                       v-model="form.emJejum"
                     />
-                    <label class="btn btn-outline-primary" for="jejumSim"
+                    <label class="btn btn-outline-action" for="jejumSim"
                       >Sim</label
                     >
 
@@ -217,7 +217,7 @@ onMounted(() => {
                       value="não"
                       v-model="form.emJejum"
                     />
-                    <label class="btn btn-outline-primary" for="jejumNao"
+                    <label class="btn btn-outline-action" for="jejumNao"
                       >Não</label
                     >
                   </div>

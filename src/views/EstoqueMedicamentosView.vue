@@ -321,9 +321,7 @@ onMounted(async () => {
                   <button
                     type="submit"
                     class="btn btn-action btn-lg"
-                    :disabled="
-                      enviando || (!form.medicamento_id && !searchTerm)
-                    "
+                    :disabled="enviando"
                   >
                     {{
                       enviando
@@ -336,7 +334,7 @@ onMounted(async () => {
                   <button
                     v-if="isEditing"
                     type="button"
-                    class="btn btn-outline-secondary btn-lg"
+                    class="btn btn-light btn-lg"
                     @click="resetForm"
                   >
                     Cancelar Edição
@@ -393,7 +391,7 @@ onMounted(async () => {
                   <td>
                     <button
                       @click="handleEditar(item)"
-                      class="btn btn-sm btn-outline-primary me-2"
+                      class="btn btn-sm btn-outline-action me-2"
                     >
                       Editar
                     </button>
