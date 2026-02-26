@@ -47,7 +47,7 @@ const handleLogin = async () => {
           class="version-text text-uppercase fw-bold"
           style="font-size: 10px; letter-spacing: 1px"
         >
-          V 1.10
+          V 1.11
         </span>
       </div>
 
