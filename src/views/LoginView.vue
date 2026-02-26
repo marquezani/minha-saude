@@ -7,6 +7,7 @@ import { handler } from "../servers/authService";
 const router = useRouter();
 const usuario = ref("");
 const password = ref("");
+const showPassword = ref(false);
 const errorMessage = ref("");
 const loading = ref(false);
 
@@ -35,7 +36,7 @@ const handleLogin = async () => {
 
 <template>
   <div
-    class="main-wrapper bg-light min-vh-100 d-flex flex-column justify-center align-items-center p-3"
+    class="main-wrapper bg-light min-vh-100 d-flex flex-column justify-content-center align-items-center p-3"
   >
     <div
       class="card border-0 shadow-sm rounded-4 overflow-hidden position-relative"
@@ -85,15 +86,50 @@ const handleLogin = async () => {
               class="form-label small fw-bold text-secondary ms-1"
               >SENHA</label
             >
-            <input
-              type="password"
-              id="password"
-              v-model="password"
-              class="form-control form-control-lg bg-light border-0 rounded-3 shadow-none custom-input"
-              placeholder="••••••••"
-              :disabled="loading"
-              required
-            />
+            <div class="position-relative">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                id="password"
+                v-model="password"
+                class="form-control form-control-lg bg-light border-0 rounded-3 shadow-none custom-input"
+                placeholder="••••••••"
+                :disabled="loading"
+                required
+              />
+              <span
+                @click="showPassword = !showPassword"
+                class="password-toggle-icon"
+              >
+                <svg
+                  v-if="!showPassword"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
+                >
+                  <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0" />
+                  <path
+                    d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="m10.79 12.912-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7.029 7.029 0 0 0 2.79-.588M5.21 3.088A7.028 7.028 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.939 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474L5.21 3.089z"
+                  />
+                  <path
+                    d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829l-2.83-2.829zm4.95.708-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6-12-12 .708-.708 12 12z"
+                  />
+                </svg>
+              </span>
+            </div>
           </div>
 
           <div
@@ -124,7 +160,9 @@ const handleLogin = async () => {
     </div>
 
     <footer class="mt-4 text-center">
-      <p class="text-muted small opacity-50">&copy; 2024 Minha Saúde</p>
+      <p class="text-muted small opacity-50">
+        &copy; {{ new Date().getFullYear() }} Minha Saúde
+      </p>
     </footer>
   </div>
 </template>
@@ -145,6 +183,7 @@ const handleLogin = async () => {
 .custom-input {
   font-size: 0.95rem;
   padding: 0.8rem 1.2rem;
+  padding-right: 2.5rem; /* Espaço para o ícone */
   transition: all 0.2s ease-in-out;
 }
 
@@ -170,5 +209,15 @@ const handleLogin = async () => {
 /* Arredondamentos Extras (Bootstrap 5 tem rounded-4, mas aqui garantimos) */
 .rounded-4 {
   border-radius: 1.5rem !important;
+}
+
+.password-toggle-icon {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #6c757d;
+  z-index: 5;
 }
 </style>
