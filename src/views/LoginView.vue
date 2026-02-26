@@ -37,7 +37,7 @@ const handleLogin = async () => {
     class="container vh-100 d-flex justify-content-center align-items-center"
   >
     <div class="card p-4 shadow-sm" style="width: 100%; max-width: 400px">
-      <span class="versao">V 1.9</span>
+      <span class="versao">V 1.10</span>
       <div class="card-body">
         <div class="text-center mb-4">
           <svg
