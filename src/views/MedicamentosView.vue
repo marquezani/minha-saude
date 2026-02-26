@@ -261,46 +261,48 @@ onMounted(async () => {
           <h4 class="mb-3">Histórico de Uso</h4>
 
           <div
-            class="table-responsive shadow-sm rounded-3 overflow-hidden"
+            class="shadow-sm rounded-3 overflow-hidden"
             v-if="paginatedItems.length > 0"
           >
-            <table class="grid-saude mb-0">
-              <thead>
-                <tr>
-                  <th class="text-nowrap">Medicamento</th>
-                  <th class="text-nowrap">Data e Hora</th>
-                  <th class="text-nowrap">Qtd. Usada</th>
-                  <th class="text-nowrap">Observação</th>
-                  <th class="text-nowrap">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in paginatedItems" :key="item.id">
-                  <td class="text-nowrap">
-                    {{ item.medicamentos.nome }}
-                    {{
-                      item.medicamentos.dosagem
-                        ? `(${item.medicamentos.dosagem})`
-                        : ""
-                    }}
-                  </td>
-                  <td class="text-nowrap">
-                    {{ new Date(item.data_hora_uso).toLocaleString("pt-BR") }}
-                  </td>
-                  <td>{{ item.quantidade_usada }}</td>
-                  <td>{{ item.observacao || "-" }}</td>
-                  <td>
-                    <button
-                      @click="handleDeletar(item.id)"
-                      class="btn btn-sm btn-outline-danger"
-                      :disabled="enviando"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="table-responsive">
+              <table class="grid-saude mb-0">
+                <thead>
+                  <tr>
+                    <th class="text-nowrap">Medicamento</th>
+                    <th class="text-nowrap">Data e Hora</th>
+                    <th class="text-nowrap">Qtd. Usada</th>
+                    <th class="text-nowrap">Observação</th>
+                    <th class="text-nowrap">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in paginatedItems" :key="item.id">
+                    <td class="text-nowrap">
+                      {{ item.medicamentos.nome }}
+                      {{
+                        item.medicamentos.dosagem
+                          ? `(${item.medicamentos.dosagem})`
+                          : ""
+                      }}
+                    </td>
+                    <td class="text-nowrap">
+                      {{ new Date(item.data_hora_uso).toLocaleString("pt-BR") }}
+                    </td>
+                    <td>{{ item.quantidade_usada }}</td>
+                    <td>{{ item.observacao || "-" }}</td>
+                    <td>
+                      <button
+                        @click="handleDeletar(item.id)"
+                        class="btn btn-sm btn-outline-danger"
+                        :disabled="enviando"
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
           <div v-else class="text-center p-4 bg-light rounded">
             Nenhum uso de medicamento registrado.

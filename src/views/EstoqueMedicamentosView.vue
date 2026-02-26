@@ -351,60 +351,62 @@ onMounted(async () => {
           <h4 class="mb-3">Estoque de Medicamentos</h4>
 
           <div
-            class="table-responsive shadow-sm rounded-3 overflow-hidden"
+            class="shadow-sm rounded-3 overflow-hidden"
             v-if="paginatedItems.length > 0"
           >
-            <table class="grid-saude mb-0">
-              <thead>
-                <tr>
-                  <th class="text-nowrap">Medicamento</th>
-                  <th class="text-nowrap">Estoque Atual</th>
-                  <th class="text-nowrap">Estoque Mínimo</th>
-                  <th class="text-nowrap">Ativo</th>
-                  <th class="text-nowrap">Última Atualização</th>
-                  <th class="text-nowrap">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in paginatedItems" :key="item.id">
-                  <td class="text-nowrap">
-                    {{ item.medicamentos.nome }}
-                    {{
-                      item.medicamentos.dosagem
-                        ? `(${item.medicamentos.dosagem})`
-                        : ""
-                    }}
-                  </td>
-                  <td>{{ item.quantidade_estoque }}</td>
-                  <td>{{ item.quantidade_minima }}</td>
-                  <td>
-                    <span
-                      :class="[
-                        'badge',
-                        item.ativo ? 'bg-success' : 'bg-danger',
-                      ]"
-                    >
-                      {{ item.ativo ? "Sim" : "Não" }}
-                    </span>
-                  </td>
-                  <td>{{ formatarData(item.ultima_atualizacao) }}</td>
-                  <td>
-                    <button
-                      @click="handleEditar(item)"
-                      class="btn btn-sm btn-outline-action me-2"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      @click="handleDeletar(item.id)"
-                      class="btn btn-sm btn-outline-danger"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="table-responsive">
+              <table class="grid-saude mb-0">
+                <thead>
+                  <tr>
+                    <th class="text-nowrap">Medicamento</th>
+                    <th class="text-nowrap">Estoque Atual</th>
+                    <th class="text-nowrap">Estoque Mínimo</th>
+                    <th class="text-nowrap">Ativo</th>
+                    <th class="text-nowrap">Última Atualização</th>
+                    <th class="text-nowrap">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in paginatedItems" :key="item.id">
+                    <td class="text-nowrap">
+                      {{ item.medicamentos.nome }}
+                      {{
+                        item.medicamentos.dosagem
+                          ? `(${item.medicamentos.dosagem})`
+                          : ""
+                      }}
+                    </td>
+                    <td>{{ item.quantidade_estoque }}</td>
+                    <td>{{ item.quantidade_minima }}</td>
+                    <td>
+                      <span
+                        :class="[
+                          'badge',
+                          item.ativo ? 'bg-success' : 'bg-danger',
+                        ]"
+                      >
+                        {{ item.ativo ? "Sim" : "Não" }}
+                      </span>
+                    </td>
+                    <td>{{ formatarData(item.ultima_atualizacao) }}</td>
+                    <td>
+                      <button
+                        @click="handleEditar(item)"
+                        class="btn btn-sm btn-outline-action me-2"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        @click="handleDeletar(item.id)"
+                        class="btn btn-sm btn-outline-danger"
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
           <div v-else class="text-center p-4 bg-light rounded">
             Nenhum item de estoque registrado.

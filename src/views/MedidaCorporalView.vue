@@ -191,10 +191,8 @@ onMounted(() => {
         <div class="col-md-10">
           <h4 class="mb-3">Histórico Corporal</h4>
 
-          <div
-            v-if="paginatedItems.length > 0"
-            class="table-responsive shadow-sm rounded-3 overflow-hidden"
-          >
+          <div class="shadow-sm rounded-3 overflow-hidden" v-if="paginatedItems.length > 0">
+            <div class="table-responsive">
             <table class="grid-saude mb-0">
               <thead>
                 <tr>

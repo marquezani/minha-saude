@@ -39,8 +39,8 @@ body {
 .form-control,
 .form-select {
   background-color: var(--input-bg) !important;
-  border: none !important;
-  border-radius: 10px !important;
+  border: 1px solid var(--input-bg) !important; /* Garante que o input tenha uma borda da cor do fundo */
+  border-radius: 10px; /* Padronizando o raio da borda */
   min-height: 50px;
   padding: 15px;
   color: var(--text-primary) !important;
@@ -50,7 +50,16 @@ body {
 .form-control:focus,
 .form-select:focus {
   background-color: var(--card-bg) !important;
-  border: 1px solid var(--action-color) !important;
+  border-color: var(--action-color) !important;
+  z-index: 3; /* Garante que o input focado fique sobre os outros no input-group */
+}
+
+/* Estilo para o texto dentro de um input-group */
+.input-group-text {
+  background-color: var(--input-bg) !important;
+  border: 1px solid var(--input-bg) !important;
+  color: var(--text-secondary) !important;
+  border-radius: 10px;
 }
 
 textarea.form-control {

@@ -250,7 +250,7 @@ onMounted(() => {
                   <div class="input-group">
                     <input
                       type="number"
-                      class="form-control form-control-lg"
+                      class="form-control"
                       v-model="form.mdDl"
                       required
                     />
@@ -278,59 +278,61 @@ onMounted(() => {
           <h4 class="mb-3">Histórico de Medições</h4>
 
           <div
-            class="table-responsive shadow-sm rounded-3 overflow-hidden"
+            class="shadow-sm rounded-3 overflow-hidden"
             v-if="paginatedItems.length > 0"
           >
-            <table class="grid-saude mb-0">
-              <thead>
-                <tr>
-                  <th class="text-nowrap">Data</th>
-                  <th class="text-nowrap">Horário</th>
-                  <th class="text-nowrap">Em Jejum?</th>
-                  <th class="text-nowrap">mg/dL</th>
-                  <th class="text-nowrap">Horas Jejum</th>
-                  <th class="text-nowrap">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in paginatedItems" :key="item.id">
-                  <td class="text-nowrap">
-                    {{ formatarData(item.data_horario) }}
-                  </td>
-                  <td class="text-nowrap">
-                    {{ formatarHora(item.data_horario) }}
-                  </td>
-                  <td>
-                    <span
-                      :class="[
-                        'status-badge',
-                        item.em_jejum ? 'status-jejum' : 'status-normal',
-                      ]"
-                    >
-                      {{ item.em_jejum ? "Sim" : "Não" }}
-                    </span>
-                  </td>
-                  <td class="fw-bold">{{ item.mg_dl }}</td>
-                  <td>
-                    <span
-                      v-if="item.em_jejum && item.horas_jejum"
-                      class="fw-bold"
-                    >
-                      {{ item.horas_jejum }}h
-                    </span>
-                    <span v-else>-</span>
-                  </td>
-                  <td>
-                    <button
-                      @click="handleDeletar(item.id)"
-                      class="btn btn-sm btn-outline-danger"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="table-responsive">
+              <table class="grid-saude mb-0">
+                <thead>
+                  <tr>
+                    <th class="text-nowrap">Data</th>
+                    <th class="text-nowrap">Horário</th>
+                    <th class="text-nowrap">Em Jejum?</th>
+                    <th class="text-nowrap">mg/dL</th>
+                    <th class="text-nowrap">Horas Jejum</th>
+                    <th class="text-nowrap">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in paginatedItems" :key="item.id">
+                    <td class="text-nowrap">
+                      {{ formatarData(item.data_horario) }}
+                    </td>
+                    <td class="text-nowrap">
+                      {{ formatarHora(item.data_horario) }}
+                    </td>
+                    <td>
+                      <span
+                        :class="[
+                          'status-badge',
+                          item.em_jejum ? 'status-jejum' : 'status-normal',
+                        ]"
+                      >
+                        {{ item.em_jejum ? "Sim" : "Não" }}
+                      </span>
+                    </td>
+                    <td class="fw-bold">{{ item.mg_dl }}</td>
+                    <td>
+                      <span
+                        v-if="item.em_jejum && item.horas_jejum"
+                        class="fw-bold"
+                      >
+                        {{ item.horas_jejum }}h
+                      </span>
+                      <span v-else>-</span>
+                    </td>
+                    <td>
+                      <button
+                        @click="handleDeletar(item.id)"
+                        class="btn btn-sm btn-outline-danger"
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
           <div v-else class="text-center p-4 bg-light rounded">
             Nenhum registro encontrado.
