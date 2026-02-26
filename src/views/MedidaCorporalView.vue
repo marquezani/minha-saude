@@ -191,41 +191,45 @@ onMounted(() => {
         <div class="col-md-10">
           <h4 class="mb-3">Histórico Corporal</h4>
 
-          <div class="shadow-sm rounded-3 overflow-hidden" v-if="paginatedItems.length > 0">
+          <div
+            class="shadow-sm rounded-3 overflow-hidden"
+            v-if="paginatedItems.length > 0"
+          >
             <div class="table-responsive">
-            <table class="grid-saude mb-0">
-              <thead>
-                <tr>
-                  <th class="text-nowrap">Data</th>
-                  <th class="text-nowrap">Peso (kg)</th>
-                  <th class="text-nowrap">Circunferência (cm)</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in paginatedItems" :key="item.id">
-                  <td class="text-nowrap">{{ formatarData(item.data) }}</td>
-                  <td class="fw-bold">
-                    {{ item.peso ? item.peso + " kg" : "-" }}
-                  </td>
-                  <td class="fw-bold">
-                    {{
-                      item.circunferencia_abdominal
-                        ? item.circunferencia_abdominal + " cm"
-                        : "-"
-                    }}
-                  </td>
-                  <td>
-                    <button
-                      @click="handleDeletarMedida(item.id)"
-                      class="btn btn-sm btn-outline-danger"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+              <table class="grid-saude mb-0">
+                <thead>
+                  <tr>
+                    <th class="text-nowrap">Data</th>
+                    <th class="text-nowrap">Peso (kg)</th>
+                    <th class="text-nowrap">Circunferência (cm)</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in paginatedItems" :key="item.id">
+                    <td class="text-nowrap">{{ formatarData(item.data) }}</td>
+                    <td class="fw-bold">
+                      {{ item.peso ? item.peso + " kg" : "-" }}
+                    </td>
+                    <td class="fw-bold">
+                      {{
+                        item.circunferencia_abdominal
+                          ? item.circunferencia_abdominal + " cm"
+                          : "-"
+                      }}
+                    </td>
+                    <td>
+                      <button
+                        @click="handleDeletarMedida(item.id)"
+                        class="btn btn-sm btn-outline-danger"
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div v-else class="text-center p-4 bg-light rounded shadow-sm">
