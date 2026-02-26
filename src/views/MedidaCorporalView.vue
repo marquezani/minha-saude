@@ -1,10 +1,141 @@
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import {
+  obterMedidas,
+  salvarMedida,
+  deletarMedida,
+} from "@/servers/medidaCorporalService";
+import { Modal } from "bootstrap";
+import AppNavbar from "@/components/Navbar.vue";
+import { useNotification } from "@/components/useNotification.js";
+
+// State
+const enviandoMedida = ref(false);
+const itensCorporais = ref([]);
+const formMedida = ref({
+  data: new Date().toISOString().substring(0, 10),
+  peso: null,
+  circunferencia_abdominal: null,
+});
+const deleteModalInstance = ref(null);
+const itemParaDeletarId = ref(null);
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+const deleteModal = ref(null);
+
+// Composables
+const { exibirMensagem } = useNotification();
+
+// Computed
+const totalPages = computed(() => {
+  if (!itensCorporais.value || itensCorporais.value.length === 0) {
+    return 1;
+  }
+  return Math.ceil(itensCorporais.value.length / itemsPerPage.value);
+});
+
+const paginatedItems = computed(() => {
+  if (!itensCorporais.value || itensCorporais.value.length === 0) {
+    return [];
+  }
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return itensCorporais.value.slice(start, end);
+});
+
+// Methods
+const carregarMedidas = async () => {
+  try {
+    itensCorporais.value = (await obterMedidas()) || [];
+  } catch (err) {
+    exibirMensagem("Erro ao carregar as medidas.", "error");
+  }
+};
+
+const handleSalvarMedida = async () => {
+  enviandoMedida.value = true;
+
+  if (!formMedida.value.peso && !formMedida.value.circunferencia_abdominal) {
+    exibirMensagem("É obrigatório informar o Peso ou a Cintura.", "error");
+    enviandoMedida.value = false;
+    return;
+  }
+
+  try {
+    await salvarMedida(formMedida.value);
+
+    exibirMensagem("Medidas salvas com sucesso!");
+    formMedida.value.peso = null;
+    formMedida.value.circunferencia_abdominal = null;
+    await carregarMedidas();
+  } catch (err) {
+    exibirMensagem("Erro ao salvar medidas.", "error");
+  } finally {
+    enviandoMedida.value = false;
+  }
+};
+
+const handleDeletarMedida = (id) => {
+  itemParaDeletarId.value = id;
+  deleteModalInstance.value.show();
+};
+
+const hideDeleteModal = () => {
+  deleteModalInstance.value.hide();
+};
+
+const confirmarExclusao = async () => {
+  try {
+    await deletarMedida(itemParaDeletarId.value);
+    exibirMensagem("Registro excluído!");
+    await carregarMedidas();
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value;
+    }
+  } catch (err) {
+    exibirMensagem("Erro ao excluir", "error");
+  } finally {
+    hideDeleteModal();
+  }
+};
+
+const formatarData = (data) => {
+  if (!data) return "";
+  return new Date(data + "T12:00:00").toLocaleDateString("pt-BR");
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
+};
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+};
+
+const goToPage = (page) => {
+  currentPage.value = page;
+};
+
+// Lifecycle
+onMounted(() => {
+  carregarMedidas();
+  if (deleteModal.value) {
+    deleteModalInstance.value = new Modal(deleteModal.value);
+  }
+});
+</script>
+
 <template>
   <div>
     <app-navbar />
     <div class="container pt-4">
       <div class="row justify-content-center mb-5">
         <div class="col-md-8 col-lg-6">
-          <div class="card shadow-sm border-0 rounded-4">
+          <div class="card card-form">
             <div class="card-body p-4 p-md-5">
               <h3 class="card-title text-center mb-4 fw-bold">
                 Registro Corporal
@@ -44,7 +175,7 @@
                 <div class="d-grid">
                   <button
                     type="submit"
-                    class="btn btn-primary btn-lg fw-bold"
+                    class="btn btn-action btn-lg"
                     :disabled="enviandoMedida"
                   >
                     {{ enviandoMedida ? "Salvando..." : "Salvar Medidas" }}
@@ -62,7 +193,7 @@
 
           <div
             v-if="paginatedItems.length > 0"
-            class="table-responsive shadow-sm rounded-3"
+            class="table-responsive shadow-sm rounded-3 overflow-hidden"
           >
             <table class="grid-saude mb-0">
               <thead>
@@ -139,15 +270,6 @@
       </div>
     </div>
 
-    <transition name="fade">
-      <div
-        v-if="notificacao.visivel"
-        :class="['toast-custom', notificacao.tipo]"
-      >
-        {{ notificacao.mensagem }}
-      </div>
-    </transition>
-
     <div
       class="modal fade"
       id="deleteMedidaModal"
@@ -183,137 +305,4 @@
   </div>
 </template>
 
-<script>
-import {
-  obterMedidas,
-  salvarMedida,
-  deletarMedida,
-} from "@/servers/medidaCorporalService";
-import { Modal } from "bootstrap";
-import AppNavbar from "@/components/Navbar.vue";
-
-export default {
-  components: {
-    AppNavbar,
-  },
-  data() {
-    return {
-      enviandoMedida: false,
-      itensCorporais: [],
-      formMedida: {
-        data: new Date().toISOString().substring(0, 10),
-        peso: null,
-        circunferencia_abdominal: null,
-      },
-      notificacao: { visivel: false, mensagem: "", tipo: "success" },
-      deleteModalInstance: null,
-      itemParaDeletarId: null,
-      currentPage: 1,
-      itemsPerPage: 10,
-    };
-  },
-  computed: {
-    totalPages() {
-      if (!this.itensCorporais || this.itensCorporais.length === 0) {
-        return 1;
-      }
-      return Math.ceil(this.itensCorporais.length / this.itemsPerPage);
-    },
-    paginatedItems() {
-      if (!this.itensCorporais || this.itensCorporais.length === 0) {
-        return [];
-      }
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
-      return this.itensCorporais.slice(start, end);
-    },
-  },
-  methods: {
-    exibirMensagem(texto, tipo = "success") {
-      this.notificacao.mensagem = texto;
-      this.notificacao.tipo = tipo;
-      this.notificacao.visivel = true;
-      setTimeout(() => {
-        this.notificacao.visivel = false;
-      }, 3000);
-    },
-    async carregarMedidas() {
-      try {
-        this.itensCorporais = (await obterMedidas()) || [];
-      } catch (err) {
-        this.exibirMensagem("Erro ao carregar as medidas.", "error");
-      }
-    },
-    async handleSalvarMedida() {
-      this.enviandoMedida = true;
-
-      if (!this.formMedida.peso && !this.formMedida.circunferencia_abdominal) {
-        this.exibirMensagem(
-          "É obrigatório informar o Peso ou a Cintura.",
-          "error",
-        );
-        this.enviandoMedida = false;
-        return;
-      }
-
-      try {
-        await salvarMedida(this.formMedida);
-
-        this.exibirMensagem("Medidas salvas com sucesso!");
-        this.formMedida.peso = null;
-        this.formMedida.circunferencia_abdominal = null;
-        await this.carregarMedidas();
-      } catch (err) {
-        this.exibirMensagem("Erro ao salvar medidas.", "error");
-      } finally {
-        this.enviandoMedida = false;
-      }
-    },
-    handleDeletarMedida(id) {
-      this.itemParaDeletarId = id;
-      this.deleteModalInstance.show();
-    },
-    hideDeleteModal() {
-      this.deleteModalInstance.hide();
-    },
-    async confirmarExclusao() {
-      try {
-        await deletarMedida(this.itemParaDeletarId);
-        this.exibirMensagem("Registro excluído!");
-        await this.carregarMedidas();
-        if (this.currentPage > this.totalPages) {
-          this.currentPage = this.totalPages;
-        }
-      } catch (err) {
-        this.exibirMensagem("Erro ao excluir", "error");
-      } finally {
-        this.hideDeleteModal();
-      }
-    },
-    formatarData(data) {
-      if (!data) return "";
-      return new Date(data + "T12:00:00").toLocaleDateString("pt-BR");
-    },
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++;
-      }
-    },
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-      }
-    },
-    goToPage(page) {
-      this.currentPage = page;
-    },
-  },
-  mounted() {
-    this.carregarMedidas();
-    if (this.$refs.deleteModal) {
-      this.deleteModalInstance = new Modal(this.$refs.deleteModal);
-    }
-  },
-};
-</script>
 <style scoped></style>

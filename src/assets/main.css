@@ -1,60 +1,119 @@
-.table-responsive {
-  border: 1px solid #f1f5f9;
-  display: block;
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+/* Paleta de Cores e Variáveis Globais */
+:root {
+  --action-color: #19bd82;
+  --page-bg: #f4f7f9;
+  --card-bg: #ffffff;
+  --input-bg: #f8f9fa;
+  --text-primary: #34475e;
+  --text-secondary: #8898aa;
+  --icon-accent: #f06272;
+  --danger-color: #ef4444; /* Mantendo uma cor de erro/perigo consistente */
 }
 
+body {
+  background-color: var(--page-bg) !important;
+  font-family: "Inter", "Roboto", sans-serif; /* Sugestão de fonte */
+}
+
+/* Estilo do Card de Formulário Padrão */
+.card-form {
+  background-color: var(--card-bg);
+  border-radius: 24px !important;
+  box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.05);
+  border: none;
+}
+
+/* Estilo dos Títulos e Labels */
+.card-form .card-title,
+.form-label {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.form-label {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+/* Estilo dos Inputs, Selects e Textareas */
+.form-control,
+.form-select {
+  background-color: var(--input-bg) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  min-height: 50px;
+  padding: 15px;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--action-color) !important;
+}
+
+textarea.form-control {
+  min-height: 80px;
+}
+
+/* Estilo do Botão de Ação Principal */
+.btn-action {
+  background-color: var(--action-color);
+  color: white;
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+  transition: filter 0.2s;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.btn-action:hover,
+.btn-action:focus {
+  color: white;
+  filter: brightness(0.9);
+}
+
+.btn-action:disabled {
+  background-color: var(--action-color);
+  opacity: 0.65;
+}
+
+/* Estilos da Tabela */
 .grid-saude {
   width: 100%;
-  border-collapse: separate;
-  background: #fff;
+  background-color: var(--card-bg);
+  border-collapse: separate; /* Para permitir bordas arredondadas na tabela */
+  border-spacing: 0;
   min-width: 600px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .grid-saude th {
-  background: #f8fafc;
-  padding: 15px;
-  color: #64748b;
-  font-size: 0.8rem;
+  background: var(--input-bg); /* Usando o cinza claro dos inputs */
+  color: var(--text-secondary); /* Usando o cinza médio */
+  border-bottom: 2px solid var(--page-bg);
+  padding: 12px 15px;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  border-bottom: 2px solid #f1f5f9;
   letter-spacing: 0.025em;
+  text-align: left;
 }
 
 .grid-saude td {
+  border-bottom: 1px solid var(--page-bg);
+  color: var(--text-primary);
   padding: 12px 15px;
-  border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
   font-size: 0.9rem;
 }
 
-.text-nowrap {
-  white-space: nowrap;
+/* Remove a borda da última linha para um visual mais limpo */
+.grid-saude tbody tr:last-child td {
+  border-bottom: none;
 }
 
-.status-badge {
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  display: inline-block;
-}
-
-.status-jejum {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-normal {
-  background: #f1f5f9;
-  color: #475569;
-}
-
+/* Estilos do Toast */
 .toast-custom {
   position: fixed;
   top: 25px;
@@ -68,20 +127,8 @@
 }
 
 .toast-custom.success {
-  background-color: #10b981;
+  background-color: var(--action-color);
 }
-
 .toast-custom.error {
-  background-color: #ef4444;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.4s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-20px) translateX(10px);
+  background-color: var(--danger-color);
 }

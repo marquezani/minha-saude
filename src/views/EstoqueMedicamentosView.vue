@@ -1,4 +1,5 @@
-<script>
+<script setup>
+import { ref, computed, onMounted } from "vue";
 import {
   salvarEstoque,
   obterEstoque,
@@ -7,268 +8,233 @@ import {
 import {
   obterMedicamentos,
   salvarMedicamento,
-} from "@/servers/medicamentosService"; // Para obter a lista de medicamentos
+} from "@/servers/medicamentosService";
 import { Modal } from "bootstrap";
 import AppNavbar from "@/components/Navbar.vue";
+import { useNotification } from "@/components/useNotification.js";
 
-export default {
-  components: {
-    AppNavbar,
-  },
-  data() {
-    return {
-      enviando: false,
-      form: {
-        id: null, // Usado para edição de um item de estoque existente
-        medicamento_id: null,
-        quantidade_estoque: 0,
-        quantidade_minima: 5,
-        ativo: true,
-      }, // <-- Fechamento correto do objeto 'form'
-      estoqueItens: [], // Lista de itens de estoque
-      medicamentosDisponiveis: [], // Lista de medicamentos para seleção no formulário
-      notificacao: { visivel: false, mensagem: "", tipo: "success" },
-      deleteModalInstance: null,
-      itemParaDeletarId: null,
-      currentPage: 1,
-      itemsPerPage: 10,
-      isEditing: false, // Indica se o formulário está em modo de edição
-      searchTerm: "", // Campo para o usuário digitar o nome do medicamento
-    };
-  },
-  computed: {
-    totalPages() {
-      if (!this.estoqueItens || this.estoqueItens.length === 0) {
-        return 1;
-      }
-      return Math.ceil(this.estoqueItens.length / this.itemsPerPage);
-    },
-    paginatedItems() {
-      if (!this.estoqueItens || this.estoqueItens.length === 0) {
-        return [];
-      }
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
-      return this.estoqueItens.slice(start, end);
-    },
-    // Filtra os medicamentos disponíveis para seleção, removendo aqueles que já possuem um registro de estoque,
-    // a menos que estejamos editando o próprio registro de estoque desse medicamento.
-    filteredMedicamentosParaSelecao() {
-      const searchTermLower = this.searchTerm
-        ? this.searchTerm.toLowerCase()
-        : "";
-      return (
-        this.medicamentosDisponiveis
-          .filter((med) => {
-            // Filtra medicamentos que já têm estoque, exceto o que está sendo editado
-            const hasEstoque = this.estoqueItens.some(
-              (estoque) =>
-                estoque.medicamento_id === med.id &&
-                estoque.id !== this.form.id,
-            );
-            return !hasEstoque;
-          })
-          // Filtra pelo termo de busca (nome ou dosagem)
-          .filter(
-            (med) =>
-              med.nome.toLowerCase().includes(searchTermLower) ||
-              (med.dosagem &&
-                med.dosagem.toLowerCase().includes(searchTermLower)),
-          )
+// State
+const enviando = ref(false);
+const form = ref({
+  id: null,
+  medicamento_id: null,
+  quantidade_estoque: 0,
+  quantidade_minima: 5,
+  ativo: true,
+});
+const estoqueItens = ref([]);
+const medicamentosDisponiveis = ref([]);
+const deleteModalInstance = ref(null);
+const itemParaDeletarId = ref(null);
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+const isEditing = ref(false);
+const searchTerm = ref("");
+const deleteModal = ref(null);
+
+// Composables
+const { exibirMensagem } = useNotification();
+
+// Computed
+const totalPages = computed(() => {
+  if (!estoqueItens.value || estoqueItens.value.length === 0) return 1;
+  return Math.ceil(estoqueItens.value.length / itemsPerPage.value);
+});
+
+const paginatedItems = computed(() => {
+  if (!estoqueItens.value || estoqueItens.value.length === 0) return [];
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return estoqueItens.value.slice(start, end);
+});
+
+const filteredMedicamentosParaSelecao = computed(() => {
+  const searchTermLower = searchTerm.value
+    ? searchTerm.value.toLowerCase()
+    : "";
+  return medicamentosDisponiveis.value
+    .filter((med) => {
+      const hasEstoque = estoqueItens.value.some(
+        (estoque) =>
+          estoque.medicamento_id === med.id && estoque.id !== form.value.id,
       );
-    },
-    // Propriedade computada para exibir o nome do medicamento no input
-    // e atualizar o searchTerm quando o medicamento_id é alterado (ex: na edição)
-    displayMedicamentoName: {
-      get() {
-        if (this.form.medicamento_id) {
-          const selected = this.medicamentosDisponiveis.find(
-            (med) => med.id === this.form.medicamento_id,
-          );
-          return selected
-            ? `${selected.nome}${
-                selected.dosagem ? " (" + selected.dosagem + ")" : ""
-              }`
-            : this.searchTerm;
-        }
-        return this.searchTerm;
-      },
-      set(value) {
-        this.searchTerm = value;
-        this.updateMedicamentoIdFromSearch(value);
-      },
-    },
-  },
-  methods: {
-    exibirMensagem(texto, tipo = "success") {
-      this.notificacao.mensagem = texto;
-      this.notificacao.tipo = tipo;
-      this.notificacao.visivel = true;
-      setTimeout(() => {
-        this.notificacao.visivel = false;
-      }, 3000);
-    },
-    async carregarMedicamentos() {
-      try {
-        this.medicamentosDisponiveis = (await obterMedicamentos()) || [];
-      } catch (err) {
-        console.error("Erro ao carregar medicamentos:", err);
-        this.exibirMensagem(
-          "Erro ao carregar medicamentos para seleção",
-          "error",
-        );
-      }
-    },
-    async carregarEstoqueDados() {
-      try {
-        this.estoqueItens = (await obterEstoque()) || [];
-      } catch (err) {
-        console.error("Erro ao carregar estoque:", err);
-        this.exibirMensagem("Erro ao carregar dados do estoque", "error");
-      }
-    },
-    // Novo método para atualizar medicamento_id com base no texto digitado
-    updateMedicamentoIdFromSearch(inputString) {
-      const found = this.medicamentosDisponiveis.find((med) => {
-        const displayValue = `${med.nome}${
-          med.dosagem ? " (" + med.dosagem + ")" : ""
-        }`;
-        return displayValue.toLowerCase() === inputString.toLowerCase();
-      });
-      this.form.medicamento_id = found ? found.id : null;
-    },
-    async handleSalvar() {
-      this.enviando = true;
-      try {
-        let medId = this.form.medicamento_id;
+      return !hasEstoque;
+    })
+    .filter(
+      (med) =>
+        med.nome.toLowerCase().includes(searchTermLower) ||
+        (med.dosagem && med.dosagem.toLowerCase().includes(searchTermLower)),
+    );
+});
 
-        // Se não houver ID de medicamento e houver um termo de busca,
-        // significa que o usuário quer cadastrar um novo medicamento.
-        if (!medId && this.searchTerm) {
-          const novoMedicamento = await salvarMedicamento({
-            nome: this.searchTerm,
-          });
-          if (novoMedicamento && novoMedicamento.id) {
-            medId = novoMedicamento.id;
-          } else {
-            throw new Error("Falha ao criar o novo medicamento.");
-          }
-        }
-
-        // Validação final para garantir que temos um ID de medicamento.
-        if (!medId) {
-          this.exibirMensagem(
-            "Forneça ou selecione um nome de medicamento válido.",
-            "error",
-          );
-          this.enviando = false;
-          return;
-        }
-
-        // Prepara os dados para salvar
-        const dadosParaSalvar = {
-          medicamento_id: medId,
-          quantidade_estoque: parseInt(this.form.quantidade_estoque) || 0,
-          quantidade_minima: parseInt(this.form.quantidade_minima) || 5,
-          ativo: this.form.ativo,
-        };
-
-        // Se estiver editando, o ID do estoque já estará no form.id e será usado pelo serviço
-        // para identificar o registro a ser atualizado.
-        await salvarEstoque(dadosParaSalvar);
-
-        this.exibirMensagem("Estoque salvo com sucesso!");
-        this.resetForm(); // Limpa o formulário
-        await this.carregarEstoqueDados(); // Recarrega a lista de estoque
-        await this.carregarMedicamentos(); // Recarrega medicamentos para atualizar opções de seleção
-      } catch (err) {
-        console.error("Erro detalhado ao salvar estoque:", err.message);
-        this.exibirMensagem(
-          err.message || "Erro ao salvar o estoque.",
-          "error",
-        );
-      } finally {
-        this.enviando = false;
-      }
-    },
-    resetForm() {
-      this.form = {
-        id: null,
-        medicamento_id: null,
-        quantidade_estoque: 0,
-        quantidade_minima: 5,
-        ativo: true,
-      };
-      this.searchTerm = ""; // Limpa o termo de busca
-      this.isEditing = false;
-    },
-    handleEditar(item) {
-      // Copia os dados do item para o formulário para edição
-      this.form = { ...item };
-      // Garante que os campos numéricos sejam tratados como números
-      this.form.quantidade_estoque = parseInt(item.quantidade_estoque);
-      this.form.quantidade_minima = parseInt(item.quantidade_minima);
-      this.form.medicamento_id = item.medicamento_id; // Garante que o ID do medicamento esteja no form
-      this.searchTerm = item.medicamentos.nome; // Preenche o campo de busca com o nome do medicamento
-      this.isEditing = true;
-      // Rola para o topo da página para exibir o formulário de edição
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    },
-    handleDeletar(id) {
-      this.itemParaDeletarId = id;
-      this.deleteModalInstance.show();
-    },
-    hideDeleteModal() {
-      this.deleteModalInstance.hide();
-    },
-    async confirmarExclusao() {
-      try {
-        await deletarEstoque(this.itemParaDeletarId);
-        this.exibirMensagem("Item de estoque excluído!");
-        this.resetForm(); // Limpa o formulário após exclusão
-        await this.carregarEstoqueDados(); // Recarrega a lista de estoque
-        await this.carregarMedicamentos(); // Recarrega medicamentos para atualizar opções de seleção
-        if (this.currentPage > this.totalPages) {
-          this.currentPage = this.totalPages;
-        }
-      } catch (err) {
-        console.error("Erro ao excluir item de estoque:", err);
-        this.exibirMensagem("Erro ao excluir item de estoque", "error");
-      } finally {
-        this.hideDeleteModal();
-      }
-    },
-    formatarData(iso) {
-      if (!iso) return "-";
-      // Formata a data e hora para o padrão brasileiro
-      return (
-        new Date(iso).toLocaleDateString("pt-BR") +
-        " " +
-        new Date(iso).toLocaleTimeString("pt-BR")
+const displayMedicamentoName = computed({
+  get() {
+    if (form.value.medicamento_id) {
+      const selected = medicamentosDisponiveis.value.find(
+        (med) => med.id === form.value.medicamento_id,
       );
-    },
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++;
-      }
-    },
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-      }
-    },
-    goToPage(page) {
-      this.currentPage = page;
-    },
+      return selected
+        ? `${selected.nome}${
+            selected.dosagem ? " (" + selected.dosagem + ")" : ""
+          }`
+        : searchTerm.value;
+    }
+    return searchTerm.value;
   },
-  async mounted() {
-    // Carrega os medicamentos e os dados do estoque ao montar o componente
-    await this.carregarMedicamentos();
-    await this.carregarEstoqueDados();
-    if (this.$refs.deleteModal)
-      this.deleteModalInstance = new Modal(this.$refs.deleteModal);
+  set(value) {
+    searchTerm.value = value;
+    updateMedicamentoIdFromSearch(value);
   },
+});
+
+// Methods
+const carregarMedicamentos = async () => {
+  try {
+    medicamentosDisponiveis.value = (await obterMedicamentos()) || [];
+  } catch (err) {
+    console.error("Erro ao carregar medicamentos:", err);
+    exibirMensagem("Erro ao carregar medicamentos para seleção", "error");
+  }
 };
+
+const carregarEstoqueDados = async () => {
+  try {
+    estoqueItens.value = (await obterEstoque()) || [];
+  } catch (err) {
+    console.error("Erro ao carregar estoque:", err);
+    exibirMensagem("Erro ao carregar dados do estoque", "error");
+  }
+};
+
+const updateMedicamentoIdFromSearch = (inputString) => {
+  const found = medicamentosDisponiveis.value.find((med) => {
+    const displayValue = `${med.nome}${
+      med.dosagem ? " (" + med.dosagem + ")" : ""
+    }`;
+    return displayValue.toLowerCase() === inputString.toLowerCase();
+  });
+  form.value.medicamento_id = found ? found.id : null;
+};
+
+const handleSalvar = async () => {
+  enviando.value = true;
+  try {
+    let medId = form.value.medicamento_id;
+    if (!medId && searchTerm.value) {
+      const novoMedicamento = await salvarMedicamento({
+        nome: searchTerm.value,
+      });
+      if (novoMedicamento && novoMedicamento.id) {
+        medId = novoMedicamento.id;
+      } else {
+        throw new Error("Falha ao criar o novo medicamento.");
+      }
+    }
+    if (!medId) {
+      exibirMensagem(
+        "Forneça ou selecione um nome de medicamento válido.",
+        "error",
+      );
+      enviando.value = false;
+      return;
+    }
+    const dadosParaSalvar = {
+      medicamento_id: medId,
+      quantidade_estoque: parseInt(form.value.quantidade_estoque) || 0,
+      quantidade_minima: parseInt(form.value.quantidade_minima) || 5,
+      ativo: form.value.ativo,
+    };
+    await salvarEstoque(dadosParaSalvar);
+    exibirMensagem("Estoque salvo com sucesso!");
+    resetForm();
+    await carregarEstoqueDados();
+    await carregarMedicamentos();
+  } catch (err) {
+    console.error("Erro detalhado ao salvar estoque:", err.message);
+    exibirMensagem(err.message || "Erro ao salvar o estoque.", "error");
+  } finally {
+    enviando.value = false;
+  }
+};
+
+const resetForm = () => {
+  form.value = {
+    id: null,
+    medicamento_id: null,
+    quantidade_estoque: 0,
+    quantidade_minima: 5,
+    ativo: true,
+  };
+  searchTerm.value = "";
+  isEditing.value = false;
+};
+
+const handleEditar = (item) => {
+  form.value = { ...item };
+  form.value.quantidade_estoque = parseInt(item.quantidade_estoque);
+  form.value.quantidade_minima = parseInt(item.quantidade_minima);
+  form.value.medicamento_id = item.medicamento_id;
+  searchTerm.value = item.medicamentos.nome;
+  isEditing.value = true;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const handleDeletar = (id) => {
+  itemParaDeletarId.value = id;
+  deleteModalInstance.value.show();
+};
+
+const hideDeleteModal = () => {
+  deleteModalInstance.value.hide();
+};
+
+const confirmarExclusao = async () => {
+  try {
+    await deletarEstoque(itemParaDeletarId.value);
+    exibirMensagem("Item de estoque excluído!");
+    resetForm();
+    await carregarEstoqueDados();
+    await carregarMedicamentos();
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value;
+    }
+  } catch (err) {
+    console.error("Erro ao excluir item de estoque:", err);
+    exibirMensagem("Erro ao excluir item de estoque", "error");
+  } finally {
+    hideDeleteModal();
+  }
+};
+
+const formatarData = (iso) => {
+  if (!iso) return "-";
+  return (
+    new Date(iso).toLocaleDateString("pt-BR") +
+    " " +
+    new Date(iso).toLocaleTimeString("pt-BR")
+  );
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) currentPage.value++;
+};
+
+const prevPage = () => {
+  if (currentPage.value > 1) currentPage.value--;
+};
+
+const goToPage = (page) => {
+  currentPage.value = page;
+};
+
+// Lifecycle
+onMounted(async () => {
+  await carregarMedicamentos();
+  await carregarEstoqueDados();
+  if (deleteModal.value) {
+    deleteModalInstance.value = new Modal(deleteModal.value);
+  }
+});
 </script>
 
 <template>
@@ -277,7 +243,7 @@ export default {
     <div class="container pt-4">
       <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-          <div class="card shadow-sm border-0 rounded-4">
+          <div class="card card-form">
             <div class="card-body p-4 p-md-5">
               <h3 class="card-title text-center mb-4 fw-bold">
                 {{
@@ -354,7 +320,7 @@ export default {
                 <div class="d-grid gap-2">
                   <button
                     type="submit"
-                    class="btn btn-primary btn-lg fw-bold"
+                    class="btn btn-action btn-lg"
                     :disabled="
                       enviando || (!form.medicamento_id && !searchTerm)
                     "
@@ -387,7 +353,7 @@ export default {
           <h4 class="mb-3">Estoque de Medicamentos</h4>
 
           <div
-            class="table-responsive shadow-sm rounded-3"
+            class="table-responsive shadow-sm rounded-3 overflow-hidden"
             v-if="paginatedItems.length > 0"
           >
             <table class="grid-saude mb-0">
@@ -482,15 +448,6 @@ export default {
       </div>
     </div>
 
-    <transition name="fade">
-      <div
-        v-if="notificacao.visivel"
-        :class="['toast-custom', notificacao.tipo]"
-      >
-        {{ notificacao.mensagem }}
-      </div>
-    </transition>
-
     <div
       class="modal fade"
       id="deleteConfirmModal"
@@ -527,62 +484,8 @@ export default {
 </template>
 
 <style scoped>
-/* Estilos ajustados para Responsividade */
-.table-responsive {
-  border: 1px solid #f1f5f9;
-}
-
-.grid-saude {
-  width: 100%;
-  border-collapse: separate;
-  background: #fff;
-  min-width: 600px; /* Garante que a tabela não esmague os dados */
-}
-
-.grid-saude th {
-  background: #f8fafc;
-  padding: 12px 15px;
-  color: #64748b;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-  border-bottom: 2px solid #f1f5f9;
-}
-
-.grid-saude td {
-  padding: 12px 15px;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-  font-size: 0.9rem;
-}
-
-.text-nowrap {
-  white-space: nowrap;
-  color: #475569;
-  font-weight: bold;
-}
-
-/* Toast Customizado */
-.toast-custom {
-  position: fixed;
-  top: 25px;
-  right: 25px;
-  padding: 16px 24px;
-  border-radius: 12px;
-  color: white;
-  z-index: 10000;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  font-weight: 600;
-}
-
-.success {
-  background-color: #10b981;
-}
-.error {
-  background-color: #ef4444;
-}
-
-/* Transições */
+/* Estilos específicos do componente podem ser adicionados aqui. Os estilos globais estão em main.css */
+/* A transição do toast foi mantida pois é específica do componente */
 .fade-enter-active,
 .fade-leave-active {
   transition: all 0.4s ease;
@@ -591,14 +494,5 @@ export default {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-20px) translateX(10px);
-}
-
-@media (max-width: 576px) {
-  .card-body {
-    padding: 1.5rem !important;
-  }
-  .h3 {
-    font-size: 1.25rem;
-  }
 }
 </style>

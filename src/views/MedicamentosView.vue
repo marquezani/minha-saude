@@ -1,4 +1,5 @@
-<script>
+<script setup>
+import { ref, computed, onMounted } from "vue";
 import { obterMedicamentos } from "@/servers/medicamentosService";
 import {
   salvarUsoMedicamento,
@@ -8,183 +9,172 @@ import {
 import { darBaixaEstoque, obterEstoque } from "@/servers/estoqueService";
 import { Modal } from "bootstrap";
 import AppNavbar from "@/components/Navbar.vue";
+import { useNotification } from "@/components/useNotification.js";
 
-export default {
-  components: {
-    AppNavbar,
-  },
-  data() {
-    return {
-      enviando: false,
-      historicoUso: [], // Lista do histórico de uso
-      medicamentosDisponiveis: [], // Lista de medicamentos para o formulário
-      estoqueItens: [],
-      form: {
-        medicamento_id: null,
-        quantidade_usada: 1,
-        data_hora_uso: new Date().toISOString().slice(0, 16), // Formato 'YYYY-MM-DDTHH:mm'
-        observacao: "",
-      },
-      notificacao: { visivel: false, mensagem: "", tipo: "success" },
-      deleteModalInstance: null,
-      itemParaDeletarId: null,
-      currentPage: 1,
-      itemsPerPage: 10,
-    };
-  },
-  computed: {
-    totalPages() {
-      if (!this.historicoUso || this.historicoUso.length === 0) {
-        return 1;
-      }
-      return Math.ceil(this.historicoUso.length / this.itemsPerPage);
-    },
-    paginatedItems() {
-      if (!this.historicoUso || this.historicoUso.length === 0) {
-        return [];
-      }
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
-      return this.historicoUso.slice(start, end);
-    },
-    medicamentosEmEstoque() {
-      if (!this.medicamentosDisponiveis.length || !this.estoqueItens.length) {
-        return [];
-      }
+// State
+const enviando = ref(false);
+const historicoUso = ref([]);
+const medicamentosDisponiveis = ref([]);
+const estoqueItens = ref([]);
+const form = ref({
+  medicamento_id: null,
+  quantidade_usada: 1,
+  data_hora_uso: new Date().toISOString().slice(0, 16),
+  observacao: "",
+});
+const deleteModalInstance = ref(null);
+const itemParaDeletarId = ref(null);
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+const deleteModal = ref(null); // Template ref for the modal element
 
-      // Cria um conjunto de IDs de medicamentos que estão em estoque com quantidade > 0
-      const emEstoqueIds = new Set(
-        this.estoqueItens
-          .filter((item) => item.quantidade_estoque > 0)
-          .map((item) => item.medicamento_id),
-      );
+// Composables
+const { exibirMensagem } = useNotification();
 
-      // Filtra a lista de medicamentos para mostrar apenas os que estão em estoque
-      return this.medicamentosDisponiveis.filter((med) =>
-        emEstoqueIds.has(med.id),
-      );
-    },
-  },
-  methods: {
-    exibirMensagem(texto, tipo = "success") {
-      this.notificacao.mensagem = texto;
-      this.notificacao.tipo = tipo;
-      this.notificacao.visivel = true;
-      setTimeout(() => {
-        this.notificacao.visivel = false;
-      }, 3000);
-    },
-    async carregarHistorico() {
-      try {
-        this.historicoUso = (await obterHistoricoUso()) || [];
-      } catch (err) {
-        console.error("Erro ao carregar histórico:", err);
-        this.exibirMensagem("Erro ao carregar histórico de uso", "error");
-      }
-    },
-    async carregarMedicamentos() {
-      try {
-        this.medicamentosDisponiveis = (await obterMedicamentos()) || [];
-      } catch (err) {
-        console.error("Erro ao carregar medicamentos para o formulário:", err);
-        this.exibirMensagem("Erro ao carregar lista de medicamentos", "error");
-      }
-    },
-    async carregarEstoque() {
-      try {
-        this.estoqueItens = (await obterEstoque()) || [];
-      } catch (err) {
-        console.error("Erro ao carregar estoque:", err);
-        this.exibirMensagem("Erro ao carregar dados do estoque", "error");
-      }
-    },
-    async handleSalvarUso() {
-      this.enviando = true;
-      try {
-        if (!this.form.medicamento_id) {
-          this.exibirMensagem("Por favor, selecione um medicamento.", "error");
-          return;
-        }
+// Computed
+const totalPages = computed(() => {
+  if (!historicoUso.value || historicoUso.value.length === 0) {
+    return 1;
+  }
+  return Math.ceil(historicoUso.value.length / itemsPerPage.value);
+});
 
-        const dadosParaSalvar = {
-          ...this.form,
-          quantidade_usada: parseInt(this.form.quantidade_usada) || 1,
-        };
+const paginatedItems = computed(() => {
+  if (!historicoUso.value || historicoUso.value.length === 0) {
+    return [];
+  }
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return historicoUso.value.slice(start, end);
+});
 
-        // Inicia as duas operações em paralelo
-        await Promise.all([
-          salvarUsoMedicamento(dadosParaSalvar),
-          darBaixaEstoque(
-            dadosParaSalvar.medicamento_id,
-            dadosParaSalvar.quantidade_usada,
-          ),
-        ]);
+const medicamentosEmEstoque = computed(() => {
+  if (!medicamentosDisponiveis.value.length || !estoqueItens.value.length) {
+    return [];
+  }
+  const emEstoqueIds = new Set(
+    estoqueItens.value
+      .filter((item) => item.quantidade_estoque > 0)
+      .map((item) => item.medicamento_id),
+  );
+  return medicamentosDisponiveis.value.filter((med) =>
+    emEstoqueIds.has(med.id),
+  );
+});
 
-        this.exibirMensagem("Uso de medicamento registrado com sucesso!");
-        this.resetForm();
-        await this.carregarHistorico();
-      } catch (err) {
-        this.exibirMensagem(err.message || "Erro ao registrar o uso.", "error");
-      } finally {
-        this.enviando = false;
-      }
-    },
-    resetForm() {
-      this.form = {
-        medicamento_id: null,
-        quantidade_usada: 1,
-        data_hora_uso: new Date().toISOString().slice(0, 16),
-        observacao: "",
-      };
-    },
-    handleDeletar(id) {
-      this.itemParaDeletarId = id;
-      this.deleteModalInstance.show();
-    },
-    hideDeleteModal() {
-      this.deleteModalInstance.hide();
-    },
-    async confirmarExclusao() {
-      try {
-        // ATENÇÃO: Ao excluir um registro de uso, o estoque NÃO é devolvido automaticamente.
-        // Isso precisaria de uma lógica mais complexa se desejado.
-        await deletarHistoricoUso(this.itemParaDeletarId);
-        this.exibirMensagem("Registro de uso excluído!");
-        await this.carregarHistorico();
-        if (this.currentPage > this.totalPages) {
-          this.currentPage = this.totalPages;
-        }
-      } catch (err) {
-        console.error("Erro ao excluir registro de uso:", err);
-        this.exibirMensagem("Erro ao excluir registro", "error");
-      } finally {
-        this.hideDeleteModal();
-      }
-    },
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++;
-      }
-    },
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-      }
-    },
-    goToPage(page) {
-      this.currentPage = page;
-    },
-  },
-  async mounted() {
-    await Promise.all([
-      this.carregarHistorico(),
-      this.carregarMedicamentos(),
-      this.carregarEstoque(),
-    ]);
-    if (this.$refs.deleteModal)
-      this.deleteModalInstance = new Modal(this.$refs.deleteModal);
-  },
+// Methods
+const carregarHistorico = async () => {
+  try {
+    historicoUso.value = (await obterHistoricoUso()) || [];
+  } catch (err) {
+    console.error("Erro ao carregar histórico:", err);
+    exibirMensagem("Erro ao carregar histórico de uso", "error");
+  }
 };
+
+const carregarMedicamentos = async () => {
+  try {
+    medicamentosDisponiveis.value = (await obterMedicamentos()) || [];
+  } catch (err) {
+    console.error("Erro ao carregar medicamentos para o formulário:", err);
+    exibirMensagem("Erro ao carregar lista de medicamentos", "error");
+  }
+};
+
+const carregarEstoque = async () => {
+  try {
+    estoqueItens.value = (await obterEstoque()) || [];
+  } catch (err) {
+    console.error("Erro ao carregar estoque:", err);
+    exibirMensagem("Erro ao carregar dados do estoque", "error");
+  }
+};
+
+const handleSalvarUso = async () => {
+  enviando.value = true;
+  try {
+    if (!form.value.medicamento_id) {
+      exibirMensagem("Por favor, selecione um medicamento.", "error");
+      return;
+    }
+    const dadosParaSalvar = {
+      ...form.value,
+      quantidade_usada: parseInt(form.value.quantidade_usada) || 1,
+    };
+    await Promise.all([
+      salvarUsoMedicamento(dadosParaSalvar),
+      darBaixaEstoque(
+        dadosParaSalvar.medicamento_id,
+        dadosParaSalvar.quantidade_usada,
+      ),
+    ]);
+    exibirMensagem("Uso de medicamento registrado com sucesso!");
+    resetForm();
+    await carregarHistorico();
+  } catch (err) {
+    exibirMensagem(err.message || "Erro ao registrar o uso.", "error");
+  } finally {
+    enviando.value = false;
+  }
+};
+
+const resetForm = () => {
+  form.value = {
+    medicamento_id: null,
+    quantidade_usada: 1,
+    data_hora_uso: new Date().toISOString().slice(0, 16),
+    observacao: "",
+  };
+};
+
+const handleDeletar = (id) => {
+  itemParaDeletarId.value = id;
+  deleteModalInstance.value.show();
+};
+
+const hideDeleteModal = () => {
+  deleteModalInstance.value.hide();
+};
+
+const confirmarExclusao = async () => {
+  try {
+    await deletarHistoricoUso(itemParaDeletarId.value);
+    exibirMensagem("Registro de uso excluído!");
+    await carregarHistorico();
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value;
+    }
+  } catch (err) {
+    console.error("Erro ao excluir registro de uso:", err);
+    exibirMensagem("Erro ao excluir registro", "error");
+  } finally {
+    hideDeleteModal();
+  }
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) currentPage.value++;
+};
+
+const prevPage = () => {
+  if (currentPage.value > 1) currentPage.value--;
+};
+
+const goToPage = (page) => {
+  currentPage.value = page;
+};
+
+// Lifecycle
+onMounted(async () => {
+  await Promise.all([
+    carregarHistorico(),
+    carregarMedicamentos(),
+    carregarEstoque(),
+  ]);
+  if (deleteModal.value) {
+    deleteModalInstance.value = new Modal(deleteModal.value);
+  }
+});
 </script>
 
 <template>
@@ -193,7 +183,7 @@ export default {
     <div class="container pt-4">
       <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-          <div class="card shadow-sm border-0 rounded-4">
+          <div class="card card-form">
             <div class="card-body p-4 p-md-5">
               <h3 class="card-title text-center mb-4 fw-bold">
                 Registrar Uso de Medicamento
@@ -201,7 +191,7 @@ export default {
 
               <form @submit.prevent="handleSalvarUso">
                 <div class="mb-3">
-                  <label class="form-label">Medicamento</label>
+                  <label class="form-label">MEDICAMENTO</label>
                   <select
                     class="form-select"
                     v-model="form.medicamento_id"
@@ -222,7 +212,7 @@ export default {
 
                 <div class="row mb-3">
                   <div class="col-md-8">
-                    <label class="form-label">Data e Hora do Uso</label>
+                    <label class="form-label">DATA E HORA DO USO</label>
                     <input
                       type="datetime-local"
                       class="form-control"
@@ -231,7 +221,7 @@ export default {
                     />
                   </div>
                   <div class="col-md-4">
-                    <label class="form-label">Quantidade</label>
+                    <label class="form-label">QUANTIDADE</label>
                     <input
                       type="number"
                       class="form-control"
@@ -243,7 +233,7 @@ export default {
                 </div>
 
                 <div class="mb-4">
-                  <label class="form-label">Observação (Opcional)</label>
+                  <label class="form-label">OBSERVAÇÃO (OPCIONAL)</label>
                   <textarea
                     class="form-control"
                     v-model="form.observacao"
@@ -254,7 +244,7 @@ export default {
                 <div class="d-grid">
                   <button
                     type="submit"
-                    class="btn btn-primary btn-lg fw-bold"
+                    class="btn btn-action btn-lg"
                     :disabled="enviando"
                   >
                     {{ enviando ? "Salvando..." : "Registrar Uso" }}
@@ -271,7 +261,7 @@ export default {
           <h4 class="mb-3">Histórico de Uso</h4>
 
           <div
-            class="table-responsive shadow-sm rounded-3"
+            class="table-responsive shadow-sm rounded-3 overflow-hidden"
             v-if="paginatedItems.length > 0"
           >
             <table class="grid-saude mb-0">
@@ -352,15 +342,6 @@ export default {
       </div>
     </div>
 
-    <transition name="fade">
-      <div
-        v-if="notificacao.visivel"
-        :class="['toast-custom', notificacao.tipo]"
-      >
-        {{ notificacao.mensagem }}
-      </div>
-    </transition>
-
     <div
       class="modal fade"
       id="deleteConfirmModal"
@@ -397,62 +378,8 @@ export default {
 </template>
 
 <style scoped>
-/* Estilos ajustados para Responsividade */
-.table-responsive {
-  border: 1px solid #f1f5f9;
-}
-
-.grid-saude {
-  width: 100%;
-  border-collapse: separate;
-  background: #fff;
-  min-width: 600px; /* Garante que a tabela não esmague os dados */
-}
-
-.grid-saude th {
-  background: #f8fafc;
-  padding: 12px 15px;
-  color: #64748b;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-  border-bottom: 2px solid #f1f5f9;
-}
-
-.grid-saude td {
-  padding: 12px 15px;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-  font-size: 0.9rem;
-}
-
-.text-nowrap {
-  white-space: nowrap;
-  color: #475569;
-  font-weight: bold;
-}
-
-/* Toast Customizado */
-.toast-custom {
-  position: fixed;
-  top: 25px;
-  right: 25px;
-  padding: 16px 24px;
-  border-radius: 12px;
-  color: white;
-  z-index: 10000;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  font-weight: 600;
-}
-
-.success {
-  background-color: #10b981;
-}
-.error {
-  background-color: #ef4444;
-}
-
-/* Transições */
+/* Estilos específicos do componente podem ser adicionados aqui. Os estilos globais estão em main.css */
+/* A transição do toast foi mantida pois é específica do componente */
 .fade-enter-active,
 .fade-leave-active {
   transition: all 0.4s ease;
@@ -461,14 +388,5 @@ export default {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-20px) translateX(10px);
-}
-
-@media (max-width: 576px) {
-  .card-body {
-    padding: 1.5rem !important;
-  }
-  .h3 {
-    font-size: 1.25rem;
-  }
 }
 </style>

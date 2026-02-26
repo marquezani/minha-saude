@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import AppLogo from "./AppLogo.vue";
+import AppLogo from "@/components/AppLogo.vue";
 import { handler } from "../servers/authService";
 
 const router = useRouter();
@@ -39,12 +39,12 @@ const handleLogin = async () => {
     class="main-wrapper bg-light min-vh-100 d-flex flex-column justify-content-center align-items-center p-3"
   >
     <div
-      class="card border-0 shadow-sm rounded-4 overflow-hidden position-relative"
+      class="card-login border-0 overflow-hidden position-relative"
       style="max-width: 400px; width: 100%"
     >
       <div class="position-absolute top-0 end-0 p-3 mt-1 me-2">
         <span
-          class="text-uppercase fw-bold text-secondary opacity-25"
+          class="version-text text-uppercase fw-bold"
           style="font-size: 10px; letter-spacing: 1px"
         >
           V 1.10
@@ -58,15 +58,17 @@ const handleLogin = async () => {
           >
             <app-logo />
           </div>
-          <h1 class="h4 fw-bold text-dark mb-1">Minha Saúde</h1>
-          <p class="text-muted small">Bem-vindo à sua jornada de bem-estar</p>
+          <h1 class="h4 fw-bold title-text mb-1">Minha Saúde</h1>
+          <p class="subtitle-text small">
+            Bem-vindo à sua jornada de bem-estar
+          </p>
         </div>
 
         <form @submit.prevent="handleLogin">
           <div class="mb-3">
             <label
               for="usuario"
-              class="form-label small fw-bold text-secondary ms-1"
+              class="form-label small fw-bold text-uppercase label-text ms-1"
               >USUÁRIO</label
             >
             <input
@@ -74,7 +76,6 @@ const handleLogin = async () => {
               id="usuario"
               v-model="usuario"
               class="form-control form-control-lg bg-light border-0 rounded-3 shadow-none custom-input"
-              placeholder="CPF"
               :disabled="loading"
               required
             />
@@ -83,7 +84,7 @@ const handleLogin = async () => {
           <div class="mb-4">
             <label
               for="password"
-              class="form-label small fw-bold text-secondary ms-1"
+              class="form-label small fw-bold text-uppercase label-text ms-1"
               >SENHA</label
             >
             <div class="position-relative">
@@ -92,7 +93,6 @@ const handleLogin = async () => {
                 id="password"
                 v-model="password"
                 class="form-control form-control-lg bg-light border-0 rounded-3 shadow-none custom-input"
-                placeholder="••••••••"
                 :disabled="loading"
                 required
               />
@@ -142,7 +142,7 @@ const handleLogin = async () => {
 
           <button
             type="submit"
-            class="btn btn-success btn-lg w-100 fw-bold py-3 shadow-sm rounded-3 mt-2 transition-all"
+            class="btn btn-action btn-lg w-100 fw-bold py-3 mt-2"
             :disabled="loading"
           >
             <template v-if="loading">
@@ -168,47 +168,65 @@ const handleLogin = async () => {
 </template>
 
 <style scoped>
+.card-login {
+  background-color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.version-text {
+  color: #8898aa;
+}
+
 .logo-container {
   width: 64px;
   height: 64px;
-  background-color: rgba(244, 63, 94, 0.06);
-  color: #f43f5e;
+  background-color: rgba(240, 98, 114, 0.1); /* Cor do ícone com opacidade */
+  border-radius: 50%;
 }
 
-/* Estilos para garantir que o Bootstrap fique com cara de App moderno */
+.title-text {
+  color: #34475e;
+}
+
+.subtitle-text {
+  color: #8898aa;
+}
+
+.label-text {
+  color: #34475e;
+}
+
 .main-wrapper {
-  background-color: #f8fafc !important; /* Slate 50 do Tailwind */
+  background-color: #f4f7f9 !important;
 }
 
 .custom-input {
-  font-size: 0.95rem;
-  padding: 0.8rem 1.2rem;
+  background-color: #f8f9fa;
+  border: none;
+  border-radius: 10px;
+  height: 50px;
+  padding: 15px;
   padding-right: 2.5rem; /* Espaço para o ícone */
-  transition: all 0.2s ease-in-out;
+  color: #34475e;
+  box-shadow: none !important;
 }
 
 .custom-input:focus {
   background-color: #ffffff !important;
-  box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.1) !important;
-  border: 1px solid #198754 !important;
+  border: 1px solid #19bd82 !important;
 }
 
-.btn-success {
-  background-color: #10b981; /* Verde esmeralda */
+.btn-action {
+  background-color: #19bd82;
+  color: white;
   border: none;
+  border-radius: 10px;
+  transition: filter 0.2s;
 }
 
-.btn-success:hover {
-  background-color: #059669;
-}
-
-.transition-all {
-  transition: all 0.3s ease;
-}
-
-/* Arredondamentos Extras (Bootstrap 5 tem rounded-4, mas aqui garantimos) */
-.rounded-4 {
-  border-radius: 1.5rem !important;
+.btn-action:hover {
+  filter: brightness(0.9);
 }
 
 .password-toggle-icon {
@@ -217,7 +235,7 @@ const handleLogin = async () => {
   right: 1rem;
   transform: translateY(-50%);
   cursor: pointer;
-  color: #6c757d;
+  color: #8898aa;
   z-index: 5;
 }
 </style>
