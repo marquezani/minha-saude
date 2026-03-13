@@ -12,10 +12,24 @@
 
       <div v-else class="row g-4">
         <div class="col-lg-6">
-          <chart-card title="Evolução da Glicose (mg/dL)">
+          <chart-card title="Evolução da Glicose em Jejum (mg/dL)">
             <line-chart
-              v-if="glicoseChartData.labels.length"
-              :chart-data="glicoseChartData"
+              v-if="glicoseJejumChartData.labels.length"
+              :chart-data="glicoseJejumChartData"
+            />
+            <div
+              v-else
+              class="d-flex align-items-center justify-content-center h-100 text-muted"
+            >
+              Não há dados suficientes para exibir o gráfico.
+            </div>
+          </chart-card>
+        </div>
+        <div class="col-lg-6">
+          <chart-card title="Evolução da Glicose Pós-prandial (mg/dL)">
+            <line-chart
+              v-if="glicoseNaoJejumChartData.labels.length"
+              :chart-data="glicoseNaoJejumChartData"
             />
             <div
               v-else
@@ -70,7 +84,8 @@ export default {
   data() {
     return {
       loading: true,
-      glicoseChartData: { labels: [], datasets: [] },
+      glicoseJejumChartData: { labels: [], datasets: [] },
+      glicoseNaoJejumChartData: { labels: [], datasets: [] },
       pesoChartData: { labels: [], datasets: [] },
       cinturaChartData: { labels: [], datasets: [] },
     };
@@ -92,20 +107,42 @@ export default {
 
         if (glicoseData && glicoseData.length > 0) {
           const reversedGlicose = [...glicoseData].reverse();
-          this.glicoseChartData = {
-            labels: reversedGlicose.map((d) =>
-              this.formatarData(d.data_horario),
-            ),
-            datasets: [
-              {
-                label: "Glicose (mg/dL)",
-                backgroundColor: "#0d6efd",
-                borderColor: "#0d6efd",
-                data: reversedGlicose.map((d) => d.mg_dl),
-                tension: 0.1,
-              },
-            ],
-          };
+          const glicoseJejum = reversedGlicose.filter((d) => d.em_jejum);
+          const glicoseNaoJejum = reversedGlicose.filter((d) => !d.em_jejum);
+
+          if (glicoseJejum.length > 0) {
+            this.glicoseJejumChartData = {
+              labels: glicoseJejum.map((d) =>
+                this.formatarData(d.data_horario),
+              ),
+              datasets: [
+                {
+                  label: "Glicose em Jejum (mg/dL)",
+                  backgroundColor: "#0d6efd",
+                  borderColor: "#0d6efd",
+                  data: glicoseJejum.map((d) => d.mg_dl),
+                  tension: 0.1,
+                },
+              ],
+            };
+          }
+
+          if (glicoseNaoJejum.length > 0) {
+            this.glicoseNaoJejumChartData = {
+              labels: glicoseNaoJejum.map((d) =>
+                this.formatarData(d.data_horario),
+              ),
+              datasets: [
+                {
+                  label: "Glicose Pós-prandial (mg/dL)",
+                  backgroundColor: "#fd7e14",
+                  borderColor: "#fd7e14",
+                  data: glicoseNaoJejum.map((d) => d.mg_dl),
+                  tension: 0.1,
+                },
+              ],
+            };
+          }
         }
 
         if (medidasData && medidasData.length > 0) {
